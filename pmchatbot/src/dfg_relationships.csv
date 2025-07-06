@@ -1,0 +1,20 @@
+source_activity,target_activity,frequency,relationship_type
+Material Preparation,Deburring & Finishing,1,directly_follows
+Deburring & Finishing,CNC Programming,2,directly_follows
+CNC Programming,Turning Process,6,directly_follows
+Turning Process,Packaging & Shipping,3,directly_follows
+Material Preparation,CNC Programming,2,directly_follows
+CNC Programming,Initial Quality Check,2,directly_follows
+Initial Quality Check,Turning Process,2,directly_follows
+Turning Process,Final Inspection,3,directly_follows
+Material Preparation,Initial Quality Check,3,directly_follows
+Initial Quality Check,CNC Programming,4,directly_follows
+Turning Process,Milling Process,3,directly_follows
+Milling Process,Deburring & Finishing,1,directly_follows
+CNC Programming,Deburring & Finishing,1,directly_follows
+Deburring & Finishing,Turning Process,1,directly_follows
+Milling Process,CNC Programming,1,directly_follows
+Milling Process,Initial Quality Check,1,directly_follows
+START,Material Preparation,6,start_activity
+Packaging & Shipping,END,3,end_activity
+Final Inspection,END,3,end_activity

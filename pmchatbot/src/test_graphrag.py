@@ -661,10 +661,29 @@ def main():
         print("Error: OpenAI API key is required for RAG functionality!")
         return
     
-    # Create sample data
-    print("Creating sample process data...")
-    df = create_sample_data()
-    print(f"   Created dataset with {len(df)} events, {df['case_id'].nunique()} cases")
+    csv_file_path = r"C:\Users\shunf\RoadToMaster\PMChat\running_example_manufacturing.csv"
+    print(f"Loading data from {csv_file_path}...")
+    
+    try:
+        df = pd.read_csv(csv_file_path, sep=';')
+        print(f" Loaded dataset with {len(df)} events")
+        
+        if 'case_id' in df.columns:
+            df['case_id'] = df['case_id'].astype(str)
+        elif 'case:concept:name' in df.columns:
+            df['case:concept:name'] = df['case:concept:name'].astype(str)
+            
+        if 'timestamp' in df.columns:
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+        elif 'time:timestamp' in df.columns:
+            df['time:timestamp'] = pd.to_datetime(df['time:timestamp'])
+            
+        print(f"   Dataset contains {df['case_id'].nunique()} unique cases")
+        print(f"   Activities: {df['activity'].unique()}")
+    
+    except Exception as e:
+        print(f"Error loading CSV file: {e}")
+        return
     
     # Convert to PM4py log
     log = prepare_pm4py_log(df)

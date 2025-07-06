@@ -1,0 +1,43 @@
+case_id;activity;timestamp;org:resource
+3;Material Preparation;2023-12-30 14:32:00+01:00;Pete
+3;Initial Quality Check;2023-12-30 15:06:00+01:00;Ellen
+3;CNC Programming;2023-12-30 16:34:00+01:00;Mike
+3;Turning Process;2024-01-06 09:18:00+01:00;Sara
+3;Milling Process;2024-01-06 12:18:00+01:00;Sean
+3;Deburring & Finishing;2024-01-06 13:06:00+01:00;Sue
+3;CNC Programming;2024-01-08 11:43:00+01:00;Mike
+3;Turning Process;2024-01-09 09:55:00+01:00;Sara
+3;Final Inspection;2024-01-15 10:45:00+01:00;Jake
+2;Material Preparation;2023-12-30 11:32:00+01:00;Pete
+2;CNC Programming;2023-12-30 12:12:00+01:00;Mike
+2;Initial Quality Check;2023-12-30 14:16:00+01:00;Ellen
+2;Turning Process;2024-01-05 11:22:00+01:00;Sara
+2;Final Inspection;2024-01-08 12:05:00+01:00;Jake
+1;Material Preparation;2023-12-30 11:02:00+01:00;Pete
+1;Deburring & Finishing;2023-12-31 10:06:00+01:00;Sue
+1;CNC Programming;2024-01-05 15:12:00+01:00;Mike
+1;Turning Process;2024-01-06 11:18:00+01:00;Sara
+1;Packaging & Shipping;2024-01-07 14:24:00+01:00;Anna
+6;Material Preparation;2024-01-06 15:02:00+01:00;Pete
+6;Initial Quality Check;2024-01-06 16:06:00+01:00;Ellen
+6;CNC Programming;2024-01-07 16:22:00+01:00;Mike
+6;Turning Process;2024-01-07 16:52:00+01:00;Sara
+6;Final Inspection;2024-01-16 11:47:00+01:00;Jake
+5;Material Preparation;2024-01-06 09:02:00+01:00;Pete
+5;Initial Quality Check;2024-01-07 10:16:00+01:00;Ellen
+5;CNC Programming;2024-01-08 11:22:00+01:00;Mike
+5;Turning Process;2024-01-10 13:28:00+01:00;Sara
+5;Milling Process;2024-01-11 16:18:00+01:00;Sean
+5;CNC Programming;2024-01-14 14:33:00+01:00;Mike
+5;Initial Quality Check;2024-01-16 15:50:00+01:00;Ellen
+5;Turning Process;2024-01-19 11:18:00+01:00;Sara
+5;Milling Process;2024-01-20 12:48:00+01:00;Sean
+5;Initial Quality Check;2024-01-21 09:06:00+01:00;Ellen
+5;CNC Programming;2024-01-21 11:34:00+01:00;Mike
+5;Turning Process;2024-01-23 13:12:00+01:00;Sara
+5;Packaging & Shipping;2024-01-24 14:56:00+01:00;Anna
+4;Material Preparation;2024-01-06 15:02:00+01:00;Pete
+4;CNC Programming;2024-01-07 12:06:00+01:00;Mike
+4;Deburring & Finishing;2024-01-08 14:43:00+01:00;Sue
+4;Turning Process;2024-01-09 12:02:00+01:00;Sara
+4;Packaging & Shipping;2024-01-12 15:44:00+01:00;Anna
