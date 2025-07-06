@@ -1,0 +1,16 @@
+case_id,activity,timestamp
+Case_1,Submit Invoice,2024-01-01 09:00:00
+Case_1,Review Invoice,2024-01-01 10:00:00
+Case_1,Approve Invoice,2024-01-01 11:00:00
+Case_2,Submit Invoice,2024-01-02 09:00:00
+Case_2,Review Invoice,2024-01-02 10:30:00
+Case_2,Reject Invoice,2024-01-02 11:30:00
+Case_3,Submit Invoice,2024-01-03 09:00:00
+Case_3,Review Invoice,2024-01-03 10:15:00
+Case_3,Approve Invoice,2024-01-03 11:15:00
+Case_4,Submit Invoice,2024-01-04 09:00:00
+Case_4,Review Invoice,2024-01-04 10:45:00
+Case_4,Approve Invoice,2024-01-04 11:45:00
+Case_5,Submit Invoice,2024-01-05 09:00:00
+Case_5,Review Invoice,2024-01-05 10:20:00
+Case_5,Reject Invoice,2024-01-05 11:20:00
