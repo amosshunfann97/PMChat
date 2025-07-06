@@ -1,11 +1,11 @@
 import pm4py
 import pandas as pd
-import matplotlib.pyplot as plt
-import networkx as nx
-from matplotlib.patches import FancyBboxPatch
-import numpy as np
 import os
 from typing import Dict, Tuple, List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class DirectlyFollowsGraphGenerator:
     """
@@ -13,13 +13,19 @@ class DirectlyFollowsGraphGenerator:
     using pm4py and your local CSV files.
     """
     
-    def __init__(self, csv_file_path: str):
+    def __init__(self, csv_file_path: str = None):
         """
         Initialize the DFG generator with a CSV file path.
         
         Args:
-            csv_file_path (str): Path to the CSV file containing process mining data
+            csv_file_path (str): Path to the CSV file containing process mining data.
+                                If None, will load from CSV_FILE_PATH environment variable.
         """
+        if csv_file_path is None:
+            csv_file_path = os.getenv("CSV_FILE_PATH")
+            if csv_file_path is None:
+                raise ValueError("CSV_FILE_PATH environment variable not set and no csv_file_path provided")
+        
         self.csv_file_path = csv_file_path
         self.df = None
         self.log = None
@@ -192,116 +198,6 @@ class DirectlyFollowsGraphGenerator:
                 
         except Exception as e:
             print(f"⚠️ PM4py visualization failed: {e}")
-            print("Falling back to custom visualization...")
-            self.visualize_dfg_custom(output_path)
-    
-    def visualize_dfg_custom(self, output_path: str = None, figsize: Tuple[int, int] = (12, 8)) -> None:
-        """
-        Create custom DFG visualization using NetworkX and Matplotlib.
-        
-        Args:
-            output_path (str): Path to save the visualization
-            figsize (tuple): Figure size (width, height)
-        """
-        if self.dfg is None:
-            raise ValueError("DFG not discovered. Call discover_dfg() first.")
-        
-        print("🎨 Creating custom DFG visualization...")
-        
-        # Create NetworkX graph
-        G = nx.DiGraph()
-        
-        # Add nodes (activities)
-        all_activities = set()
-        for (source, target), count in self.dfg.items():
-            all_activities.add(source)
-            all_activities.add(target)
-        
-        for activity in all_activities:
-            G.add_node(activity)
-        
-        # Add edges (directly-follows relationships)
-        for (source, target), count in self.dfg.items():
-            G.add_edge(source, target, weight=count)
-        
-        # Create visualization
-        plt.figure(figsize=figsize)
-        
-        # Calculate layout
-        pos = self._calculate_layout(G)
-        
-        # Draw nodes
-        self._draw_nodes(G, pos)
-        
-        # Draw edges
-        self._draw_edges(G, pos)
-        
-        # Add labels
-        self._add_labels(G, pos)
-        
-        plt.title("Directly-Follows Graph", fontsize=16, fontweight='bold')
-        plt.axis('off')
-        plt.tight_layout()
-        
-        if output_path:
-            plt.savefig(output_path, dpi=300, bbox_inches='tight')
-            print(f"💾 Custom DFG saved to {output_path}")
-        
-        plt.show()
-    
-    def _calculate_layout(self, G: nx.DiGraph) -> Dict:
-        """Calculate optimal layout for the graph."""
-        try:
-            # Try hierarchical layout first
-            pos = nx.spring_layout(G, k=3, iterations=50)
-        except:
-            # Fallback to circular layout
-            pos = nx.circular_layout(G)
-        
-        return pos
-    
-    def _draw_nodes(self, G: nx.DiGraph, pos: Dict) -> None:
-        """Draw nodes with different colors for start/end activities."""
-        node_colors = []
-        node_sizes = []
-        
-        for node in G.nodes():
-            if node in self.start_activities:
-                node_colors.append('lightgreen')
-                node_sizes.append(3000)
-            elif node in self.end_activities:
-                node_colors.append('lightcoral')
-                node_sizes.append(3000)
-            else:
-                node_colors.append('lightblue')
-                node_sizes.append(2000)
-        
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes,
-                              alpha=0.8, linewidths=2, edgecolors='black')
-    
-    def _draw_edges(self, G: nx.DiGraph, pos: Dict) -> None:
-        """Draw edges with thickness proportional to frequency."""
-        edges = G.edges()
-        weights = [G[u][v]['weight'] for u, v in edges]
-        
-        # Normalize weights for edge thickness
-        if weights:
-            max_weight = max(weights)
-            edge_widths = [3 * (w / max_weight) + 0.5 for w in weights]
-        else:
-            edge_widths = [1] * len(edges)
-        
-        nx.draw_networkx_edges(G, pos, width=edge_widths, alpha=0.7,
-                              edge_color='gray', arrowsize=20, arrowstyle='->')
-        
-        # Add edge labels (frequency)
-        edge_labels = {(u, v): str(G[u][v]['weight']) for u, v in edges}
-        nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=8)
-    
-    def _add_labels(self, G: nx.DiGraph, pos: Dict) -> None:
-        """Add activity labels to nodes."""
-        labels = {node: node for node in G.nodes()}
-        nx.draw_networkx_labels(G, pos, labels, font_size=10, font_weight='bold')
     
     def export_dfg_data(self, output_path: str = "dfg_data.csv") -> None:
         """
@@ -387,17 +283,37 @@ class DirectlyFollowsGraphGenerator:
         print(f"   - End activities: {len(self.end_activities)}")
 
 
+def setup_environment():
+    """Setup and validate environment variables"""
+    csv_file_path = os.getenv("CSV_FILE_PATH")
+    
+    if not csv_file_path:
+        print("❌ Error: CSV_FILE_PATH environment variable not set!")
+        print("Please add CSV_FILE_PATH to your .env file")
+        return None
+    
+    if not os.path.exists(csv_file_path):
+        print(f"❌ Error: CSV file not found at {csv_file_path}")
+        print("Please check the CSV_FILE_PATH in your .env file")
+        return None
+    
+    print(f"✅ Using CSV file: {csv_file_path}")
+    return csv_file_path
+
+
 def main():
     """Example usage of the DirectlyFollowsGraphGenerator."""
     print("🚀 Starting Directly-Follows Graph Generation")
     print("=" * 60)
     
-    # File path - adjust this to your CSV file
-    csv_file_path = r"C:\Users\shunf\RoadToMaster\PMChat\running_example_manufacturing.csv"
+    # Setup environment and get CSV file path
+    csv_file_path = setup_environment()
+    if csv_file_path is None:
+        return
     
     try:
-        # Initialize generator
-        dfg_gen = DirectlyFollowsGraphGenerator(csv_file_path)
+        # Initialize generator (will use environment variable)
+        dfg_gen = DirectlyFollowsGraphGenerator()
         
         # Load data (auto-detect columns)
         dfg_gen.load_data()
@@ -417,8 +333,8 @@ def main():
         # Try PM4py visualization only
         try:
             dfg_gen.visualize_dfg_pm4py("dfg_pm4py.png")
-        except:
-            print("PM4py visualization not available.")
+        except Exception as e:
+            print(f"PM4py visualization not available: {e}")
         
         # Export data
         dfg_gen.export_dfg_data("dfg_relationships.csv")

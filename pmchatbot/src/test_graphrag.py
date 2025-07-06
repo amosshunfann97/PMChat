@@ -8,6 +8,8 @@ from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import HybridCypherRetriever
+import time
+import traceback
 
 # Load environment variables
 load_dotenv()
@@ -234,7 +236,6 @@ def store_activity_chunks_in_neo4j(driver, dfg, start_activities, end_activities
                 print(f"   - Error creating activity chunk {i}: {e}")
         
         # Wait for nodes to be committed
-        import time
         time.sleep(2)
         
         # Create fulltext index first
@@ -312,7 +313,6 @@ def store_activity_chunks_in_neo4j(driver, dfg, start_activities, end_activities
                 
         except Exception as e:
             print(f"   - Critical error in vector index creation: {e}")
-            import traceback
             traceback.print_exc()
 
 def setup_activity_chunk_graphrag(driver):
@@ -477,7 +477,6 @@ def setup_activity_chunk_graphrag(driver):
                             except Exception as e:
                                 print(f"   - Failed to drop index {index_name}: {e}")
                         
-                        import time
                         time.sleep(3)
                         
                         # Create new vector index with a unique name
@@ -549,7 +548,6 @@ def setup_activity_chunk_graphrag(driver):
                             
                     except Exception as e:
                         print(f"   - Failed to recreate vector index: {e}")
-                        import traceback
                         traceback.print_exc()
                         return None
                 else:
@@ -570,7 +568,6 @@ def setup_activity_chunk_graphrag(driver):
         
     except Exception as e:
         print(f"Error setting up GraphRAG: {e}")
-        import traceback
         traceback.print_exc()
         return None
 
@@ -641,13 +638,24 @@ def setup_environment():
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")
     neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
     openai_api_key = os.getenv("OPENAI_API_KEY")
+    csv_file_path = os.getenv("CSV_FILE_PATH")
     
     if openai_api_key:
         openai.api_key = openai_api_key
     else:
         print("Warning: OPENAI_API_KEY not found in environment")
     
-    return neo4j_uri, neo4j_user, neo4j_password, openai_api_key
+    if not csv_file_path:
+        print("❌ Error: CSV_FILE_PATH environment variable not set!")
+        print("Please add CSV_FILE_PATH to your .env file")
+        return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, None
+    
+    if not os.path.exists(csv_file_path):
+        print(f"❌ Error: CSV file not found at {csv_file_path}")
+        print("Please check the CSV_FILE_PATH in your .env file")
+        return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, None
+    
+    return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, csv_file_path
 
 def main():
     """Main function to run the test with activity-based chunks"""
@@ -655,13 +663,17 @@ def main():
     print("=" * 70)
     
     # Setup environment
-    neo4j_uri, neo4j_user, neo4j_password, openai_api_key = setup_environment()
+    neo4j_uri, neo4j_user, neo4j_password, openai_api_key, csv_file_path = setup_environment()
     
     if not openai_api_key:
         print("Error: OpenAI API key is required for RAG functionality!")
         return
     
-    csv_file_path = r"C:\Users\shunf\RoadToMaster\PMChat\running_example_manufacturing.csv"
+    if not csv_file_path:
+        print("Error: CSV file path is required!")
+        return
+    
+    print(f"✅ Using CSV file: {csv_file_path}")
     print(f"Loading data from {csv_file_path}...")
     
     try:
