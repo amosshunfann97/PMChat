@@ -14,33 +14,62 @@ import traceback
 # Load environment variables
 load_dotenv()
 
-def create_sample_data():
-    """Create sample process mining data for testing"""
-    data = {
-        'case_id': ['Case_1', 'Case_1', 'Case_1', 'Case_2', 'Case_2', 'Case_2', 
-                    'Case_3', 'Case_3', 'Case_3', 'Case_4', 'Case_4', 'Case_4', 
-                    'Case_5', 'Case_5', 'Case_5'],
-        'activity': [
-            'Submit Invoice', 'Review Invoice', 'Approve Invoice',
-            'Submit Invoice', 'Review Invoice', 'Reject Invoice',
-            'Submit Invoice', 'Review Invoice', 'Approve Invoice',
-            'Submit Invoice', 'Review Invoice', 'Approve Invoice',
-            'Submit Invoice', 'Review Invoice', 'Reject Invoice'
-        ],
-        'timestamp': [
-            '2024-01-01 09:00:00', '2024-01-01 10:00:00', '2024-01-01 11:00:00',
-            '2024-01-02 09:00:00', '2024-01-02 10:30:00', '2024-01-02 11:30:00',
-            '2024-01-03 09:00:00', '2024-01-03 10:15:00', '2024-01-03 11:15:00',
-            '2024-01-04 09:00:00', '2024-01-04 10:45:00', '2024-01-04 11:45:00',
-            '2024-01-05 09:00:00', '2024-01-05 10:20:00', '2024-01-05 11:20:00'
-        ]
-    }
-    
-    df = pd.DataFrame(data)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df.to_csv("events.csv", index=False)
-    print("Created events.csv with sample data")
-    return df
+# Global process mining domain context - define once and reuse
+PROCESS_MINING_CONTEXT = """You are a process mining expert. 
+
+IMPORTANT: Always check if the user is asking a simple factual question about the process data. If so, provide ONLY the direct answer based on the data.
+
+For simple questions like:
+- "How many times does X follow Y?"
+- "What activities come after X?"
+- "What is the flow from start to finish?"
+- "Which activities are start/end activities?"
+
+Provide only the factual answer from the process mining data without additional analysis.
+
+Only provide detailed process mining analysis when the user explicitly asks for:
+- Recommendations or improvements
+- Bottleneck analysis
+- Optimization suggestions
+- Process efficiency insights
+- Root cause analysis
+
+Your expertise includes:
+- Activity flow analysis and process discovery
+- Bottleneck identification and root cause analysis
+- Process efficiency optimization recommendations
+- Manufacturing workflow understanding
+- Business process reengineering principles
+
+Guidelines for analysis (only when explicitly requested):
+1. Focus on actionable process insights
+2. Identify potential bottlenecks or inefficiencies
+3. Suggest process improvements when relevant
+4. Use process mining terminology appropriately
+5. Consider both current state and optimization opportunities
+6. Provide specific, data-driven recommendations
+
+Always structure your responses to be helpful for process analysts and manufacturing engineers."""
+
+# Global example questions for help - used by both interfaces
+EXAMPLE_QUESTIONS = [
+    "What is the complete flow from start to finish?",
+    "Which activities follow Material Preparation?",
+    "Where are the potential bottlenecks in this process?",
+    "How can we optimize the CNC Programming step?",
+    "What improvements would reduce cycle time?",
+    "How does quality inspection impact the process?",
+    "What are the possible paths through the process?",
+    "Which activities could be parallelized?"
+]
+
+def show_help():
+    """Display example questions - shared by both interfaces"""
+    print("\nEXAMPLE QUESTIONS:")
+    print("=" * 50)
+    for i, question in enumerate(EXAMPLE_QUESTIONS, 1):
+        print(f"   {i}. '{question}'")
+    print("\n" + "=" * 50)
 
 def prepare_pm4py_log(df):
     """Convert DataFrame to PM4py event log"""
@@ -262,7 +291,6 @@ def store_activity_chunks_in_neo4j(driver, dfg, start_activities, end_activities
             
             # Try different vector index creation approaches
             try:
-                # Method 1: Standard syntax
                 session.run("""
                     CREATE VECTOR INDEX activity_chunk_vector_index IF NOT EXISTS
                     FOR (ac:ActivityChunk) ON (ac.embedding)
@@ -273,38 +301,12 @@ def store_activity_chunks_in_neo4j(driver, dfg, start_activities, end_activities
                         }
                     }
                 """)
-                print("   - Created vector index (standard syntax)")
+                print("   - Created vector index")
                 vector_index_created = True
-            except Exception as e1:
-                print(f"   - Standard syntax failed: {e1}")
-                
-                # Method 2: Alternative syntax without backticks
-                try:
-                    session.run("""
-                        CREATE VECTOR INDEX activity_chunk_vector_index IF NOT EXISTS
-                        FOR (ac:ActivityChunk) ON (ac.embedding)
-                        OPTIONS {
-                            indexConfig: {
-                                "vector.dimensions": 3072,
-                                "vector.similarity_function": "cosine"
-                            }
-                        }
-                    """)
-                    print("   - Created vector index (alternative syntax)")
-                    vector_index_created = True
-                except Exception as e2:
-                    print(f"   - Alternative syntax failed: {e2}")
-                    
-                    # Method 3: Basic syntax without options
-                    try:
-                        session.run("""
-                            CREATE VECTOR INDEX activity_chunk_vector_index IF NOT EXISTS
-                            FOR (ac:ActivityChunk) ON (ac.embedding)
-                        """)
-                        print("   - Created vector index (basic syntax)")
-                        vector_index_created = True
-                    except Exception as e3:
-                        print(f"   - Basic syntax failed: {e3}")
+            except Exception as e:
+                print(f"   Vector index creation failed: {e}")
+                print("   Your Neo4j version might need a different syntax")
+                vector_index_created = False
             
             if vector_index_created:
                 print("   - Vector index creation completed (will be verified during GraphRAG setup)")
@@ -323,7 +325,7 @@ def setup_activity_chunk_graphrag(driver):
         return None
     
     try:
-        # Check if indexes exist and are online with detailed debugging
+        # Check if indexes exist and are online
         with driver.session() as session:
             try:
                 # List ALL indexes for debugging
@@ -333,7 +335,7 @@ def setup_activity_chunk_graphrag(driver):
                 for idx in all_indexes:
                     print(f"   - {idx['name']}: {idx['state']} ({idx['type']}) - {idx['labelsOrTypes']} {idx['properties']}")
                 
-                # Look for any vector index on ActivityChunk.embedding
+                # Look for vector index on ActivityChunk.embedding
                 vector_index_name = None
                 vector_index_ready = False
                 
@@ -363,15 +365,12 @@ def setup_activity_chunk_graphrag(driver):
                 
             except Exception as e:
                 print(f"Error checking indexes: {e}")
-                vector_index_ready = False
-                fulltext_index_ready = False
-                vector_index_name = None
-                fulltext_index_name = None
+                return None
         
         # Setup embedder for query encoding
         embedder = OpenAIEmbeddings(model="text-embedding-3-large")
         
-        # Try to use HybridCypherRetriever if both indexes are available
+        # Use HybridCypherRetriever (requires both indexes)
         if vector_index_ready and fulltext_index_ready and vector_index_name and fulltext_index_name:
             print(f"Using HybridCypherRetriever with vector index '{vector_index_name}' and fulltext index '{fulltext_index_name}'...")
             
@@ -379,7 +378,6 @@ def setup_activity_chunk_graphrag(driver):
             retrieval_query = """
                 MATCH (node)-[:DESCRIBES]->(activity:Activity)
                 
-                // Get related activities for context
                 OPTIONAL MATCH (activity)-[r1:NEXT]->(next:Activity)
                 OPTIONAL MATCH (prev:Activity)-[r2:NEXT]->(activity)
                 
@@ -405,154 +403,10 @@ def setup_activity_chunk_graphrag(driver):
                 retrieval_query=retrieval_query,
                 embedder=embedder
             )
-            
-        elif vector_index_ready and vector_index_name:
-            print(f"Using VectorCypherRetriever with vector index '{vector_index_name}'...")
-            
-            from neo4j_graphrag.retrievers import VectorCypherRetriever
-            
-            retrieval_query = """
-                MATCH (node)-[:DESCRIBES]->(activity:Activity)
-                
-                OPTIONAL MATCH (activity)-[r1:NEXT]->(next:Activity)
-                OPTIONAL MATCH (prev:Activity)-[r2:NEXT]->(activity)
-                
-                WITH node, activity,
-                     collect(DISTINCT next.name + '(' + toString(r1.count) + ')') as next_activities,
-                     collect(DISTINCT prev.name + '(' + toString(r2.count) + ')') as prev_activities
-                
-                RETURN node.text + 
-                       ' [Graph Context: ' + activity.name + 
-                       CASE WHEN size(next_activities) > 0 
-                            THEN ' leads to: ' + reduce(s = '', x IN next_activities[..3] | s + x + ', ')
-                            ELSE '' END +
-                       CASE WHEN size(prev_activities) > 0 
-                            THEN ' follows: ' + reduce(s = '', x IN prev_activities[..3] | s + x + ', ')
-                            ELSE '' END + ']'
-                       AS text
-            """
-            
-            retriever = VectorCypherRetriever(
-                driver=driver,
-                index_name=vector_index_name,
-                retrieval_query=retrieval_query,
-                embedder=embedder
-            )
-            
         else:
-            print("Vector index not ready. Let's try to fix this...")
-            
-            # Check if there are nodes with embeddings
-            with driver.session() as session:
-                result = session.run("""
-                    MATCH (ac:ActivityChunk) 
-                    WHERE ac.embedding IS NOT NULL 
-                    RETURN count(ac) as count, 
-                           size(ac.embedding) as embedding_size 
-                    LIMIT 1
-                """)
-                record = result.single()
-                
-                if record and record['count'] > 0:
-                    print(f"   - Found {record['count']} nodes with embeddings of size {record['embedding_size']}")
-                    
-                    # Drop ALL existing vector indexes on ActivityChunk.embedding
-                    try:
-                        # Get all vector indexes on ActivityChunk.embedding
-                        result = session.run("""
-                            SHOW INDEXES YIELD name, type, labelsOrTypes, properties
-                            WHERE type = 'VECTOR' 
-                            AND 'ActivityChunk' IN labelsOrTypes 
-                            AND 'embedding' IN properties
-                            RETURN name
-                        """)
-                        
-                        existing_vector_indexes = [record['name'] for record in result]
-                        print(f"   - Found existing vector indexes: {existing_vector_indexes}")
-                        
-                        for index_name in existing_vector_indexes:
-                            try:
-                                session.run(f"DROP INDEX `{index_name}`")
-                                print(f"   - Dropped index: {index_name}")
-                            except Exception as e:
-                                print(f"   - Failed to drop index {index_name}: {e}")
-                        
-                        time.sleep(3)
-                        
-                        # Create new vector index with a unique name
-                        new_index_name = "activity_chunk_vector_index"
-                        session.run(f"""
-                            CREATE VECTOR INDEX `{new_index_name}`
-                            FOR (ac:ActivityChunk) ON (ac.embedding)
-                            OPTIONS {{
-                                indexConfig: {{
-                                    `vector.dimensions`: {record['embedding_size']},
-                                    `vector.similarity_function`: 'cosine'
-                                }}
-                            }}
-                        """)
-                        print(f"   - Created vector index: {new_index_name}")
-                        
-                        # Wait for it to come online
-                        vector_index_created = False
-                        for i in range(10):
-                            time.sleep(3)
-                            result = session.run(f"""
-                                SHOW INDEXES 
-                                YIELD name, state 
-                                WHERE name = '{new_index_name}'
-                                RETURN state
-                            """)
-                            index_state = result.single()
-                            if index_state and index_state['state'] == 'ONLINE':
-                                print(f"   - Vector index '{new_index_name}' is now ONLINE")
-                                vector_index_created = True
-                                break
-                            else:
-                                print(f"   - Vector index state: {index_state['state'] if index_state else 'NOT_FOUND'}")
-                        
-                        if vector_index_created:
-                            print(f"Successfully created and using vector index: {new_index_name}")
-                            from neo4j_graphrag.retrievers import VectorCypherRetriever
-                            
-                            retrieval_query = """
-                                MATCH (node)-[:DESCRIBES]->(activity:Activity)
-                                
-                                OPTIONAL MATCH (activity)-[r1:NEXT]->(next:Activity)
-                                OPTIONAL MATCH (prev:Activity)-[r2:NEXT]->(activity)
-                                
-                                WITH node, activity,
-                                     collect(DISTINCT next.name + '(' + toString(r1.count) + ')') as next_activities,
-                                     collect(DISTINCT prev.name + '(' + toString(r2.count) + ')') as prev_activities
-                                
-                                RETURN node.text + 
-                                       ' [Graph Context: ' + activity.name + 
-                                       CASE WHEN size(next_activities) > 0 
-                                            THEN ' leads to: ' + reduce(s = '', x IN next_activities[..3] | s + x + ', ')
-                                            ELSE '' END +
-                                       CASE WHEN size(prev_activities) > 0 
-                                            THEN ' follows: ' + reduce(s = '', x IN prev_activities[..3] | s + x + ', ')
-                                            ELSE '' END + ']'
-                                       AS text
-                            """
-                            
-                            retriever = VectorCypherRetriever(
-                                driver=driver,
-                                index_name=new_index_name,
-                                retrieval_query=retrieval_query,
-                                embedder=embedder
-                            )
-                        else:
-                            print("Failed to create working vector index")
-                            return None
-                            
-                    except Exception as e:
-                        print(f"   - Failed to recreate vector index: {e}")
-                        traceback.print_exc()
-                        return None
-                else:
-                    print("   - No ActivityChunk nodes with embeddings found")
-                    return None
+            print("Error: Both vector and fulltext indexes are required for HybridCypherRetriever")
+            print("Please ensure your indexes are created and ONLINE")
+            return None
         
         # Setup LLM
         llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
@@ -597,40 +451,106 @@ def query_neo4j(driver):
         result = session.run("""
             MATCH (ac:ActivityChunk)-[:DESCRIBES]->(a:Activity)
             RETURN ac.activity_name as activity, 
-                   substring(ac.text, 0, 80) + '...' as chunk_preview
+                ac.text as full_text
             ORDER BY ac.id
         """)
         
         print("\nActivity chunks created:")
         for record in result:
             print(f"   Activity: {record['activity']}")
-            print(f"   Preview: {record['chunk_preview']}")
-            print()
+            print(f"   Full Text: {record['full_text']}")
+            print("-" * 60)  # Add separator between chunks
 
 def graphrag_query_interface(rag):
-    """GraphRAG-powered query interface with activity chunks"""
-    print("\nGraphRAG Query Interface with Activity Chunks (type 'quit' to exit):")
-    print("Ask natural language questions about the process activities:")
-    print("Examples:")
-    print("  - 'What does the Submit Invoice activity do?'")
-    print("  - 'What happens after Review Invoice?'")
-    print("  - 'Which activities start the process?'")
-    print("  - 'How does the approval process work?'")
-    print("  - 'What are the different outcomes after reviewing?'")
+    """Enhanced GraphRAG-powered query interface with process mining domain expertise"""
+    print("\n" + "="*80)
+    print("PROCESS MINING EXPERT - GraphRAG Interface")
+    print("="*80)
+    print("I'm your process mining expert assistant. I can help you understand:")
+    print("Process flows and activity relationships")
+    print("Bottlenecks and process inefficiencies") 
+    print("Process optimization opportunities")
+    print("Activity patterns and frequencies")
+    print("Root cause analysis")
+    print("\nType 'quit' to exit, 'help' for more examples")
+    print("-" * 80)
     
+    # Main interaction loop
     while True:
-        question = input("\nYour question: ").strip()
+        question = input("\nProcess Mining Question: ").strip()
         
         if question.lower() in ['quit', 'exit', 'q']:
+            print("\nThanks for using Process Mining Expert! Keep optimizing those processes!")
             break
+        
+        if question.lower() in ['help', 'examples', '?']:
+            show_help()  # Use the global function
+            continue
         
         if question:
             try:
-                print("Processing with activity-based chunks and graph retrieval...")
+                print("\n🔄 Analyzing process data with domain expertise...")
+                
+                # Use original question for retrieval (this goes to Neo4j search)
                 result = rag.search(question)
-                print(f"\nAnswer: {result.answer}")
+                
+                # Enhance the LLM response with process mining context
+                enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
+
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc.
+
+Retrieved Information: {result.answer}
+
+User Question: {question}
+
+Please provide a detailed process mining analysis based on the retrieved information:"""
+                
+                # Get enhanced response from LLM with process mining context
+                from neo4j_graphrag.llm import OpenAILLM
+                llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+                enhanced_answer = llm.invoke(enhanced_prompt)
+                
+                # Display the enhanced response
+                print(f"\nAnswer: {enhanced_answer.content}")
+                
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"\nAnalysis Error: {e}")
+                print("Try rephrasing your question or type 'help' for examples")
+
+def graphrag_query_interface_basic(rag):
+    """Basic GraphRAG-powered query interface WITHOUT enhanced prompting"""
+    print("\n" + "="*80)
+    print("BASIC GRAPHRAG INTERFACE (No Enhanced Prompting)")
+    print("="*80)
+    print("This is the raw GraphRAG output without domain expertise enhancement.")
+    print("Type 'quit' to exit, 'help' for examples")
+    print("-" * 80)
+    
+    # Main interaction loop
+    while True:
+        question = input("\nBasic GraphRAG Question: ").strip()
+        
+        if question.lower() in ['quit', 'exit', 'q']:
+            print("\nThanks for testing basic GraphRAG!")
+            break
+        
+        if question.lower() in ['help', 'examples', '?']:
+            show_help()  # Use the global function
+            continue
+        
+        if question:
+            try:
+                print("\n🔄 Getting basic GraphRAG response...")
+                
+                # Direct GraphRAG call without enhancement
+                result = rag.search(question)
+                
+                # Display the raw GraphRAG response
+                print(f"\nBasic Answer: {result.answer}")
+                
+            except Exception as e:
+                print(f"\nError: {e}")
+                print("Try rephrasing your question or type 'help' for examples")
 
 def setup_environment():
     """Setup environment variables"""
@@ -646,12 +566,12 @@ def setup_environment():
         print("Warning: OPENAI_API_KEY not found in environment")
     
     if not csv_file_path:
-        print("❌ Error: CSV_FILE_PATH environment variable not set!")
+        print("Error: CSV_FILE_PATH environment variable not set!")
         print("Please add CSV_FILE_PATH to your .env file")
         return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, None
     
     if not os.path.exists(csv_file_path):
-        print(f"❌ Error: CSV file not found at {csv_file_path}")
+        print(f"Error: CSV file not found at {csv_file_path}")
         print("Please check the CSV_FILE_PATH in your .env file")
         return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, None
     
@@ -673,7 +593,7 @@ def main():
         print("Error: CSV file path is required!")
         return
     
-    print(f"✅ Using CSV file: {csv_file_path}")
+    print(f"Using CSV file: {csv_file_path}")
     print(f"Loading data from {csv_file_path}...")
     
     try:
@@ -722,8 +642,70 @@ def main():
         rag = setup_activity_chunk_graphrag(driver)
         
         if rag:
-            # Use GraphRAG interface with activity chunks
-            graphrag_query_interface(rag)
+            # Ask user which mode they want to test
+            print("\n" + "="*60)
+            print("TESTING MODE SELECTION")
+            print("="*60)
+            print("1. Basic GraphRAG (no enhanced prompting)")
+            print("2. Enhanced GraphRAG (with process mining expertise)")
+            print("3. Compare both side-by-side")
+            
+            while True:
+                choice = input("\nSelect mode (1/2/3): ").strip()
+                
+                if choice == '1':
+                    graphrag_query_interface_basic(rag)
+                    break
+                elif choice == '2':
+                    graphrag_query_interface(rag)
+                    break
+                elif choice == '3':
+                    print("\n" + "="*60)
+                    print("COMPARISON MODE")
+                    print("="*60)
+                    print("Enter your question to see both basic and enhanced responses")
+                    
+                    while True:
+                        question = input("\nComparison Question (or 'quit'): ").strip()
+                        
+                        if question.lower() in ['quit', 'exit', 'q']:
+                            break
+                        
+                        if question:
+                            try:
+                                print("\n" + "-"*40)
+                                print("BASIC GRAPHRAG RESPONSE:")
+                                print("-"*40)
+                                basic_result = rag.search(question)
+                                print(f"{basic_result.answer}")
+                                
+                                print("\n" + "-"*40)
+                                print("ENHANCED RESPONSE:")
+                                print("-"*40)
+                                
+                                # Process mining context (same as before)
+                                enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
+
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc.
+
+Retrieved Information: {basic_result.answer}
+
+User Question: {question}
+
+Please provide a detailed process mining analysis based on the retrieved information:"""
+                                
+                                from neo4j_graphrag.llm import OpenAILLM
+                                llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+                                enhanced_answer = llm.invoke(enhanced_prompt)
+                                print(f"{enhanced_answer.content}")
+                                
+                                print("\n" + "="*60)
+                                
+                            except Exception as e:
+                                print(f"Error: {e}")
+                    break
+                else:
+                    print("Please enter 1, 2, or 3")
         else:
             print("Failed to setup GraphRAG. Check your OpenAI API key.")
         
