@@ -3,13 +3,13 @@ import openai
 import neo4j
 import pandas as pd
 import os
+import time
+import traceback
 from dotenv import load_dotenv
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import HybridCypherRetriever
-import time
-import traceback
 from collections import defaultdict, Counter
 
 # Load environment variables
@@ -633,13 +633,66 @@ def graphrag_query_interface(rag):
             try:
                 print("\n🔄 Analyzing process data with domain expertise (case-based)...")
                 
+                # First, show which chunks were retrieved
+                print("\n📋 RETRIEVED CHUNKS:")
+                print("-" * 50)
+                try:
+                    search_result = rag.retriever.search(question, top_k=2)
+                    
+                    # Handle the structured response format
+                    if isinstance(search_result, dict):
+                        # If it's a dictionary, look for 'items' key
+                        items = search_result.get('items', search_result.get('results', []))
+                    elif hasattr(search_result, 'items'):
+                        # If it has an items attribute
+                        items = search_result.items
+                    elif isinstance(search_result, list):
+                        # If it's directly a list
+                        items = search_result
+                    else:
+                        # Try to iterate over it directly
+                        items = list(search_result) if search_result else []
+                    
+                    # Display the retrieved items
+                    for i, item in enumerate(items, 1):
+                        if hasattr(item, 'content'):
+                            # Extract the actual content from the Record wrapper
+                            content = str(item.content)
+                            if content.startswith('<Record text="') and content.endswith('">'):
+                                # Remove the Record wrapper
+                                actual_content = content[14:-2]  # Remove '<Record text="' and '">'
+                            else:
+                                actual_content = content
+                        
+                            print(f"Chunk {i}: {actual_content[:150]}...")
+                            
+                            if hasattr(item, 'metadata') and item.metadata:
+                                print(f"   Metadata: {item.metadata}")
+                            else:
+                                print(f"   Metadata: None")
+                                
+                            # Check if there's a score attribute
+                            if hasattr(item, 'score'):
+                                print(f"   Score: {item.score:.4f}")
+                            else:
+                                print(f"   Score: Not available")
+                        else:
+                            print(f"Chunk {i}: {str(item)[:150]}...")
+                        print()
+                        
+                except Exception as retrieval_error:
+                    print(f"Could not display retrieval details: {retrieval_error}")
+                    print(f"Raw search result type: {type(search_result)}")
+                    print(f"Raw search result: {str(search_result)[:200]}...")
+                    print("Proceeding with query...")
+                
                 # Use original question for retrieval (this goes to Neo4j search)
                 result = rag.search(question)
                 
                 # Enhance the LLM response with process mining context
                 enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
-Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to CASE-BASED chunks that describe different process variants and execution patterns found across different cases.
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to CASE-BASED chunks that describe different process variants and execution patterns.
 
 Retrieved Information: {result.answer}
 
@@ -653,7 +706,9 @@ Please provide a detailed process mining analysis based on the retrieved informa
                 enhanced_answer = llm.invoke(enhanced_prompt)
                 
                 # Display the enhanced response
-                print(f"\nAnswer: {enhanced_answer.content}")
+                print(f"\n💡 ENHANCED ANSWER:")
+                print("-" * 50)
+                print(f"{enhanced_answer.content}")
                 
             except Exception as e:
                 print(f"\nAnalysis Error: {e}")
@@ -684,11 +739,66 @@ def graphrag_query_interface_basic(rag):
             try:
                 print("\n🔄 Getting basic GraphRAG response (case-based)...")
                 
+                # First, show which chunks were retrieved
+                print("\n📋 RETRIEVED CHUNKS:")
+                print("-" * 50)
+                try:
+                    search_result = rag.retriever.search(question, top_k=2)
+                    
+                    # Handle the structured response format
+                    if isinstance(search_result, dict):
+                        # If it's a dictionary, look for 'items' key
+                        items = search_result.get('items', search_result.get('results', []))
+                    elif hasattr(search_result, 'items'):
+                        # If it has an items attribute
+                        items = search_result.items
+                    elif isinstance(search_result, list):
+                        # If it's directly a list
+                        items = search_result
+                    else:
+                        # Try to iterate over it directly
+                        items = list(search_result) if search_result else []
+                    
+                    # Display the retrieved items
+                    for i, item in enumerate(items, 1):
+                        if hasattr(item, 'content'):
+                            # Extract the actual content from the Record wrapper
+                            content = str(item.content)
+                            if content.startswith('<Record text="') and content.endswith('">'):
+                                # Remove the Record wrapper
+                                actual_content = content[14:-2]  # Remove '<Record text="' and '">'
+                            else:
+                                actual_content = content
+                        
+                            print(f"Chunk {i}: {actual_content[:150]}...")
+                            
+                            if hasattr(item, 'metadata') and item.metadata:
+                                print(f"   Metadata: {item.metadata}")
+                            else:
+                                print(f"   Metadata: None")
+                                
+                            # Check if there's a score attribute
+                            if hasattr(item, 'score'):
+                                print(f"   Score: {item.score:.4f}")
+                            else:
+                                print(f"   Score: Not available")
+                        else:
+                            print(f"Chunk {i}: {str(item)[:150]}...")
+                        print()
+                        
+                except Exception as retrieval_error:
+                    print(f"Could not display retrieval details: {retrieval_error}")
+                    print(f"Raw search result type: {type(search_result)}")
+                    print(f"Raw search result: {str(search_result)[:200]}...")
+                    print("Proceeding with query...")
+                
                 # Direct GraphRAG call without enhancement
                 result = rag.search(question)
                 
                 # Display the raw GraphRAG response
-                print(f"\nBasic Answer: {result.answer}")
+                print(f"\n🤖 BASIC ANSWER:")
+                print("-" * 50)
+                print(f"{result.answer}")
                 
             except Exception as e:
                 print(f"\nError: {e}")
@@ -832,7 +942,7 @@ def main():
                                 # Process mining context (same as before)
                                 enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
-Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to CASE-BASED chunks that describe different process variants and execution patterns found across different cases.
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to CASE-BASED chunks that describe different process variants and execution patterns.
 
 Retrieved Information: {basic_result.answer}
 
