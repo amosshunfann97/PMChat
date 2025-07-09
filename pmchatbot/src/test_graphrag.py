@@ -3,13 +3,14 @@ import openai
 import neo4j
 import pandas as pd
 import os
+import time
+import traceback
 from dotenv import load_dotenv
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import HybridCypherRetriever
-import time
-import traceback
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 # Load environment variables
 load_dotenv()
@@ -60,7 +61,9 @@ EXAMPLE_QUESTIONS = [
     "What improvements would reduce cycle time?",
     "How does quality inspection impact the process?",
     "What are the possible paths through the process?",
-    "Which activities could be parallelized?"
+    "Which activities could be parallelized?",
+    "What are the different process variants?",
+    "Which cases follow similar patterns?"
 ]
 
 def show_help():
@@ -112,8 +115,24 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
         incoming = [(src, count) for (src, tgt), count in dfg.items() if tgt == activity]
         outgoing = [(tgt, count) for (src, tgt), count in dfg.items() if src == activity]
         
+        # Calculate total execution count
+        total_incoming = sum(count for _, count in incoming)
+        total_outgoing = sum(count for _, count in outgoing)
+        
+        # For activities, execution count is typically the max of incoming or outgoing
+        # For start activities, use outgoing count; for end activities, use incoming count
+        if activity in start_activities:
+            execution_count = total_outgoing if total_outgoing > 0 else start_activities[activity]
+        elif activity in end_activities:
+            execution_count = total_incoming if total_incoming > 0 else end_activities[activity]
+        else:
+            execution_count = max(total_incoming, total_outgoing) if total_incoming > 0 or total_outgoing > 0 else 0
+        
         # Create natural language description for this activity
         text = f"{activity} is an activity in this process. "
+        
+        # Add execution count as second sentence - FOR ALL ACTIVITIES
+        text += f"This activity executed {execution_count} times. "
         
         # Add start/end information
         if activity in start_activities:
@@ -132,13 +151,6 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
             outgoing_desc = [f"{tgt} ({count} times)" for tgt, count in outgoing]
             text += f"{activity} is followed by: {', '.join(outgoing_desc)}. "
         
-        # Add behavioral context
-        total_incoming = sum(count for _, count in incoming)
-        total_outgoing = sum(count for _, count in outgoing)
-        
-        if total_incoming > 0 and total_outgoing > 0:
-            text += f"This activity processes {total_incoming} incoming flows and produces {total_outgoing} outgoing flows. "
-        
         # Create activity model data for potential graph queries
         activity_model = {
             "activity": activity,
@@ -147,7 +159,8 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
             "is_start": activity in start_activities,
             "is_end": activity in end_activities,
             "start_frequency": start_activities.get(activity, 0),
-            "end_frequency": end_activities.get(activity, 0)
+            "end_frequency": end_activities.get(activity, 0),
+            "execution_count": execution_count
         }
         
         chunks.append({
@@ -370,18 +383,45 @@ def setup_activity_chunk_graphrag(driver):
         # Setup embedder for query encoding
         embedder = OpenAIEmbeddings(model="text-embedding-3-large")
         
+        # Custom formatter to extract scores and metadata - SAME AS CASE-BASED VERSION
+        def custom_result_formatter(record):
+            from neo4j_graphrag.types import RetrieverResultItem
+            
+            # Extract score from the record
+            score = record.get("score", None)
+            
+            # Extract additional metadata from the record
+            record_metadata = record.get("metadata", {})
+            
+            # Create comprehensive metadata
+            metadata = {}
+            if score is not None:
+                metadata["score"] = score
+            
+            # Add custom metadata if available
+            if record_metadata:
+                metadata.update(record_metadata)
+            
+            # Extract content
+            content = record.get("text", str(record))
+            
+            return RetrieverResultItem(
+                content=content,
+                metadata=metadata if metadata else None,
+            )
+        
         # Use HybridCypherRetriever (requires both indexes)
         if vector_index_ready and fulltext_index_ready and vector_index_name and fulltext_index_name:
             print(f"Using HybridCypherRetriever with vector index '{vector_index_name}' and fulltext index '{fulltext_index_name}'...")
             
-            # Enhanced retrieval query
+            # Enhanced retrieval query for activity-based chunks - SAME PATTERN AS CASE-BASED
             retrieval_query = """
                 MATCH (node)-[:DESCRIBES]->(activity:Activity)
                 
                 OPTIONAL MATCH (activity)-[r1:NEXT]->(next:Activity)
                 OPTIONAL MATCH (prev:Activity)-[r2:NEXT]->(activity)
                 
-                WITH node, activity,
+                WITH node, activity, score,  // ← Include score from the base hybrid search
                      collect(DISTINCT next.name + '(' + toString(r1.count) + ')') as next_activities,
                      collect(DISTINCT prev.name + '(' + toString(r2.count) + ')') as prev_activities
                 
@@ -393,7 +433,17 @@ def setup_activity_chunk_graphrag(driver):
                        CASE WHEN size(prev_activities) > 0 
                             THEN ' follows: ' + reduce(s = '', x IN prev_activities[..3] | s + x + ', ')
                             ELSE '' END + ']'
-                       AS text
+                       AS text,
+                       score AS score,  // ← Return the score
+                       {
+                           activity_name: activity.name,
+                           is_start: activity.is_start,
+                           is_end: activity.is_end,
+                           start_count: activity.start_count,
+                           end_count: activity.end_count,
+                           type: node.type,
+                           source: node.source
+                       } AS metadata 
             """
             
             retriever = HybridCypherRetriever(
@@ -401,7 +451,8 @@ def setup_activity_chunk_graphrag(driver):
                 vector_index_name=vector_index_name,
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
-                embedder=embedder
+                embedder=embedder,
+                result_formatter=custom_result_formatter 
             )
         else:
             print("Error: Both vector and fulltext indexes are required for HybridCypherRetriever")
@@ -417,7 +468,7 @@ def setup_activity_chunk_graphrag(driver):
             llm=llm
         )
         
-        print("GraphRAG setup completed successfully!")
+        print("Activity-based GraphRAG setup completed successfully!")
         return rag
         
     except Exception as e:
@@ -451,7 +502,7 @@ def query_neo4j(driver):
         result = session.run("""
             MATCH (ac:ActivityChunk)-[:DESCRIBES]->(a:Activity)
             RETURN ac.activity_name as activity, 
-                ac.text as full_text
+                   ac.text as full_text
             ORDER BY ac.id
         """)
         
@@ -464,9 +515,9 @@ def query_neo4j(driver):
 def graphrag_query_interface(rag):
     """Enhanced GraphRAG-powered query interface with process mining domain expertise"""
     print("\n" + "="*80)
-    print("PROCESS MINING EXPERT - GraphRAG Interface")
+    print("PROCESS MINING EXPERT - GraphRAG Interface (Activity-Based)")
     print("="*80)
-    print("I'm your process mining expert assistant. I can help you understand:")
+    print("I'm your process mining expert assistant using ACTIVITY-BASED chunking. I can help you understand:")
     print("Process flows and activity relationships")
     print("Bottlenecks and process inefficiencies") 
     print("Process optimization opportunities")
@@ -484,12 +535,56 @@ def graphrag_query_interface(rag):
             break
         
         if question.lower() in ['help', 'examples', '?']:
-            show_help()  # Use the global function
+            show_help()
             continue
         
         if question:
             try:
-                print("\n🔄 Analyzing process data with domain expertise...")
+                print("\nAnalyzing process data with domain expertise (activity-based)...")
+                
+                # First, show which chunks were retrieved
+                print("\nRETRIEVED CHUNKS:")
+                print("-" * 50)
+                try:
+                    search_result = rag.retriever.search(question, top_k=5)
+                    
+                    # Extract items from the RetrieverResult
+                    items = search_result.items if hasattr(search_result, 'items') else []
+                    
+                    # Extract query metadata (contains query vector and other retrieval info)
+                    query_metadata = search_result.metadata if hasattr(search_result, 'metadata') else {}
+                    
+                    # Display the retrieved items
+                    for i, item in enumerate(items, 1):
+                        # Extract content from Neo4j Record format
+                        content = str(item.content)
+                        
+                        # Clean up Neo4j Record wrapper format
+                        if content.startswith('<Record text="') and content.endswith('">'):
+                            actual_content = content[14:-2]  # Remove '<Record text="' and '">'
+                        else:
+                            actual_content = content
+                        
+                        print(f"Chunk {i}: {actual_content[:150]}...")
+                        
+                        # Individual items metadata
+                        print(f"   Individual Metadata: {item.metadata}")
+                        
+                        # Similarity scores are not exposed by HybridCypherRetriever
+                        print(f"   Similarity Score: Not available (HybridCypherRetriever limitation)")
+                        
+                        print()
+                    
+                    # Show query-level metadata if available
+                    if query_metadata:
+                        print("📊 QUERY METADATA:")
+                        print(f"   Query Vector Dimension: {len(query_metadata.get('query_vector', []))}")
+                        print(f"   Available Metadata Keys: {list(query_metadata.keys())}")
+                        print()
+                        
+                except Exception as retrieval_error:
+                    print(f"Could not display retrieval details: {retrieval_error}")
+                    print("Proceeding with query...")
                 
                 # Use original question for retrieval (this goes to Neo4j search)
                 result = rag.search(question)
@@ -497,7 +592,7 @@ def graphrag_query_interface(rag):
                 # Enhance the LLM response with process mining context
                 enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
-Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc.
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to ACTIVITY-BASED chunks that describe individual activities and their relationships.
 
 Retrieved Information: {result.answer}
 
@@ -511,7 +606,9 @@ Please provide a detailed process mining analysis based on the retrieved informa
                 enhanced_answer = llm.invoke(enhanced_prompt)
                 
                 # Display the enhanced response
-                print(f"\nAnswer: {enhanced_answer.content}")
+                print(f"\n💡 ENHANCED ANSWER:")
+                print("-" * 50)
+                print(f"{enhanced_answer.content}")
                 
             except Exception as e:
                 print(f"\nAnalysis Error: {e}")
@@ -520,7 +617,7 @@ Please provide a detailed process mining analysis based on the retrieved informa
 def graphrag_query_interface_basic(rag):
     """Basic GraphRAG-powered query interface WITHOUT enhanced prompting"""
     print("\n" + "="*80)
-    print("BASIC GRAPHRAG INTERFACE (No Enhanced Prompting)")
+    print("BASIC GRAPHRAG INTERFACE (Activity-Based, No Enhanced Prompting)")
     print("="*80)
     print("This is the raw GraphRAG output without domain expertise enhancement.")
     print("Type 'quit' to exit, 'help' for examples")
@@ -535,18 +632,61 @@ def graphrag_query_interface_basic(rag):
             break
         
         if question.lower() in ['help', 'examples', '?']:
-            show_help()  # Use the global function
+            show_help()
             continue
         
         if question:
             try:
-                print("\n🔄 Getting basic GraphRAG response...")
+                print("\n🔄 Getting basic GraphRAG response (activity-based)...")
+                
+                # First, show which chunks were retrieved
+                print("\n📋 RETRIEVED CHUNKS:")
+                print("-" * 50)
+                try:
+                    search_result = rag.retriever.search(question, top_k=5)
+                    
+                    # Extract items from the RetrieverResult
+                    items = search_result.items if hasattr(search_result, 'items') else []
+                    
+                    # Extract query metadata (contains query vector and other retrieval info)
+                    query_metadata = search_result.metadata if hasattr(search_result, 'metadata') else {}
+                    
+                    # Display the retrieved items
+                    for i, item in enumerate(items, 1):
+                        # Extract content from Neo4j Record format
+                        content = str(item.content)
+                        
+                        # Clean up Neo4j Record wrapper format
+                        if content.startswith('<Record text="') and content.endswith('">'):
+                            actual_content = content[14:-2]  # Remove '<Record text="' and '">'
+                        else:
+                            actual_content = content
+                        
+                        print(f"Chunk {i}: {actual_content[:150]}...")
+                        
+                        # Individual items metadata
+                        print(f"   Individual Metadata: {item.metadata}")
+                        
+                        print()
+                    
+                    # Show query-level metadata if available
+                    if query_metadata:
+                        print("📊 QUERY METADATA:")
+                        print(f"   Query Vector Dimension: {len(query_metadata.get('query_vector', []))}")
+                        print(f"   Available Metadata Keys: {list(query_metadata.keys())}")
+                        print()
+                        
+                except Exception as retrieval_error:
+                    print(f"Could not display retrieval details: {retrieval_error}")
+                    print("Proceeding with query...")
                 
                 # Direct GraphRAG call without enhancement
                 result = rag.search(question)
                 
                 # Display the raw GraphRAG response
-                print(f"\nBasic Answer: {result.answer}")
+                print(f"\n🤖 BASIC ANSWER:")
+                print("-" * 50)
+                print(f"{result.answer}")
                 
             except Exception as e:
                 print(f"\nError: {e}")
@@ -644,7 +784,7 @@ def main():
         if rag:
             # Ask user which mode they want to test
             print("\n" + "="*60)
-            print("TESTING MODE SELECTION")
+            print("TESTING MODE SELECTION (ACTIVITY-BASED)")
             print("="*60)
             print("1. Basic GraphRAG (no enhanced prompting)")
             print("2. Enhanced GraphRAG (with process mining expertise)")
@@ -661,7 +801,7 @@ def main():
                     break
                 elif choice == '3':
                     print("\n" + "="*60)
-                    print("COMPARISON MODE")
+                    print("COMPARISON MODE (ACTIVITY-BASED)")
                     print("="*60)
                     print("Enter your question to see both basic and enhanced responses")
                     
@@ -686,7 +826,7 @@ def main():
                                 # Process mining context (same as before)
                                 enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
-Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc.
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to ACTIVITY-BASED chunks that describe individual activities and their relationships.
 
 Retrieved Information: {basic_result.answer}
 

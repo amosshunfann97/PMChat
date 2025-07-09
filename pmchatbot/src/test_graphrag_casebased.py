@@ -497,6 +497,33 @@ def setup_case_chunk_graphrag(driver):
         # Setup embedder for query encoding
         embedder = OpenAIEmbeddings(model="text-embedding-3-large")
         
+        # Custom formatter to extract scores and metadata
+        def custom_result_formatter(record):
+            from neo4j_graphrag.types import RetrieverResultItem
+            
+            # Extract score from the record
+            score = record.get("score", None)
+            
+            # Extract additional metadata from the record
+            record_metadata = record.get("metadata", {})
+            
+            # Create comprehensive metadata
+            metadata = {}
+            if score is not None:
+                metadata["score"] = score
+            
+            # Add custom metadata if available
+            if record_metadata:
+                metadata.update(record_metadata)
+            
+            # Extract content
+            content = record.get("text", str(record))
+            
+            return RetrieverResultItem(
+                content=content,
+                metadata=metadata if metadata else None,
+            )
+        
         # Use HybridCypherRetriever (requires both indexes)
         if vector_index_ready and fulltext_index_ready and vector_index_name and fulltext_index_name:
             print(f"Using HybridCypherRetriever with vector index '{vector_index_name}' and fulltext index '{fulltext_index_name}'...")
@@ -511,7 +538,7 @@ def setup_case_chunk_graphrag(driver):
                 // Get some example cases
                 OPTIONAL MATCH (case:Case)-[:FOLLOWS]->(variant)
                 
-                WITH node, variant,
+                WITH node, variant, score,  // ← Include score from the base hybrid search
                      collect(DISTINCT activity.name + '(' + toString(e.position) + ')') as variant_activities,
                      collect(DISTINCT case.id)[..3] as example_cases
                 
@@ -521,7 +548,15 @@ def setup_case_chunk_graphrag(driver):
                        CASE WHEN size(example_cases) > 0 
                             THEN ' Example cases: ' + reduce(s = '', x IN example_cases | s + x + ', ')
                             ELSE '' END + ']'
-                       AS text
+                       AS text,
+                       score AS score,  // ← Return the score
+                       {
+                           variant_string: variant.variant_string,
+                           rank: variant.rank,
+                           frequency: variant.frequency,
+                           type: node.type,
+                           source: node.source
+                       } AS metadata 
             """
             
             retriever = HybridCypherRetriever(
@@ -529,7 +564,8 @@ def setup_case_chunk_graphrag(driver):
                 vector_index_name=vector_index_name,
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
-                embedder=embedder
+                embedder=embedder,
+                result_formatter=custom_result_formatter 
             )
         else:
             print("Error: Both vector and fulltext indexes are required for HybridCypherRetriever")
@@ -639,51 +675,42 @@ def graphrag_query_interface(rag):
                 try:
                     search_result = rag.retriever.search(question, top_k=2)
                     
-                    # Handle the structured response format
-                    if isinstance(search_result, dict):
-                        # If it's a dictionary, look for 'items' key
-                        items = search_result.get('items', search_result.get('results', []))
-                    elif hasattr(search_result, 'items'):
-                        # If it has an items attribute
-                        items = search_result.items
-                    elif isinstance(search_result, list):
-                        # If it's directly a list
-                        items = search_result
-                    else:
-                        # Try to iterate over it directly
-                        items = list(search_result) if search_result else []
+                    # Extract items from the RetrieverResult
+                    items = search_result.items if hasattr(search_result, 'items') else []
+                    
+                    # Extract query metadata (contains query vector and other retrieval info)
+                    query_metadata = search_result.metadata if hasattr(search_result, 'metadata') else {}
                     
                     # Display the retrieved items
                     for i, item in enumerate(items, 1):
-                        if hasattr(item, 'content'):
-                            # Extract the actual content from the Record wrapper
-                            content = str(item.content)
-                            if content.startswith('<Record text="') and content.endswith('">'):
-                                # Remove the Record wrapper
-                                actual_content = content[14:-2]  # Remove '<Record text="' and '">'
-                            else:
-                                actual_content = content
+                        # Extract content from Neo4j Record format
+                        content = str(item.content)
                         
-                            print(f"Chunk {i}: {actual_content[:150]}...")
-                            
-                            if hasattr(item, 'metadata') and item.metadata:
-                                print(f"   Metadata: {item.metadata}")
-                            else:
-                                print(f"   Metadata: None")
-                                
-                            # Check if there's a score attribute
-                            if hasattr(item, 'score'):
-                                print(f"   Score: {item.score:.4f}")
-                            else:
-                                print(f"   Score: Not available")
+                        # Clean up Neo4j Record wrapper format
+                        if content.startswith('<Record text="') and content.endswith('">'):
+                            actual_content = content[14:-2]  # Remove '<Record text="' and '">'
                         else:
-                            print(f"Chunk {i}: {str(item)[:150]}...")
+                            actual_content = content
+                        
+                        print(f"Chunk {i}: {actual_content[:150]}...")
+                        
+                        # Individual items don't have metadata in this implementation
+                        print(f"   Individual Metadata: {item.metadata}")
+                        
+                        # Similarity scores are not exposed by HybridCypherRetriever
+                        print(f"   Similarity Score: Not available (HybridCypherRetriever limitation)")
+                        
+                        print()
+                    
+                    # Show query-level metadata if available
+                    if query_metadata:
+                        print("📊 QUERY METADATA:")
+                        print(f"   Query Vector Dimension: {len(query_metadata.get('query_vector', []))}")
+                        print(f"   Available Metadata Keys: {list(query_metadata.keys())}")
                         print()
                         
                 except Exception as retrieval_error:
                     print(f"Could not display retrieval details: {retrieval_error}")
-                    print(f"Raw search result type: {type(search_result)}")
-                    print(f"Raw search result: {str(search_result)[:200]}...")
                     print("Proceeding with query...")
                 
                 # Use original question for retrieval (this goes to Neo4j search)
@@ -745,51 +772,39 @@ def graphrag_query_interface_basic(rag):
                 try:
                     search_result = rag.retriever.search(question, top_k=2)
                     
-                    # Handle the structured response format
-                    if isinstance(search_result, dict):
-                        # If it's a dictionary, look for 'items' key
-                        items = search_result.get('items', search_result.get('results', []))
-                    elif hasattr(search_result, 'items'):
-                        # If it has an items attribute
-                        items = search_result.items
-                    elif isinstance(search_result, list):
-                        # If it's directly a list
-                        items = search_result
-                    else:
-                        # Try to iterate over it directly
-                        items = list(search_result) if search_result else []
+                    # Extract items from the RetrieverResult
+                    items = search_result.items if hasattr(search_result, 'items') else []
+                    
+                    # Extract query metadata (contains query vector and other retrieval info)
+                    query_metadata = search_result.metadata if hasattr(search_result, 'metadata') else {}
                     
                     # Display the retrieved items
                     for i, item in enumerate(items, 1):
-                        if hasattr(item, 'content'):
-                            # Extract the actual content from the Record wrapper
-                            content = str(item.content)
-                            if content.startswith('<Record text="') and content.endswith('">'):
-                                # Remove the Record wrapper
-                                actual_content = content[14:-2]  # Remove '<Record text="' and '">'
-                            else:
-                                actual_content = content
+                        # Extract content from Neo4j Record format
+                        content = str(item.content)
                         
-                            print(f"Chunk {i}: {actual_content[:150]}...")
-                            
-                            if hasattr(item, 'metadata') and item.metadata:
-                                print(f"   Metadata: {item.metadata}")
-                            else:
-                                print(f"   Metadata: None")
-                                
-                            # Check if there's a score attribute
-                            if hasattr(item, 'score'):
-                                print(f"   Score: {item.score:.4f}")
-                            else:
-                                print(f"   Score: Not available")
+                        # Clean up Neo4j Record wrapper format
+                        if content.startswith('<Record text="') and content.endswith('">'):
+                            actual_content = content[14:-2]  # Remove '<Record text="' and '">'
                         else:
-                            print(f"Chunk {i}: {str(item)[:150]}...")
+                            actual_content = content
+                        
+                        print(f"Chunk {i}: {actual_content[:150]}...")
+                        
+                        # Individual items don't have metadata in this implementation
+                        print(f"   Individual Metadata: {item.metadata}")
+                        
+                        print()
+                    
+                    # Show query-level metadata if available
+                    if query_metadata:
+                        print("📊 QUERY METADATA:")
+                        print(f"   Query Vector Dimension: {len(query_metadata.get('query_vector', []))}")
+                        print(f"   Available Metadata Keys: {list(query_metadata.keys())}")
                         print()
                         
                 except Exception as retrieval_error:
                     print(f"Could not display retrieval details: {retrieval_error}")
-                    print(f"Raw search result type: {type(search_result)}")
-                    print(f"Raw search result: {str(search_result)[:200]}...")
                     print("Proceeding with query...")
                 
                 # Direct GraphRAG call without enhancement
