@@ -91,13 +91,15 @@ def discover_process_model(log):
     print(f"   - End activities: {list(end_activities.keys())}")
     return dfg, start_activities, end_activities
 
-def generate_activity_based_chunks(dfg, start_activities, end_activities):
+def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map):
     print("Generating activity-based process model chunks...")
     chunks = []
     all_activities = set()
     for (src, tgt), count in dfg.items():
         all_activities.add(src)
         all_activities.add(tgt)
+
+    execution_counts = {}
     for activity in all_activities:
         incoming = [(src, count) for (src, tgt), count in dfg.items() if tgt == activity]
         outgoing = [(tgt, count) for (src, tgt), count in dfg.items() if src == activity]
@@ -109,18 +111,43 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
             execution_count = total_incoming if total_incoming > 0 else end_activities[activity]
         else:
             execution_count = max(total_incoming, total_outgoing) if total_incoming > 0 or total_outgoing > 0 else 0
-        text = f"{activity} is an activity in this process. "
-        text += f"This activity executed {execution_count} times. "
+        execution_counts[activity] = execution_count
+
+    max_count = max(execution_counts.values())
+    min_count = min(execution_counts.values())
+
+    for activity in all_activities:
+        incoming = [(src, count) for (src, tgt), count in dfg.items() if tgt == activity]
+        outgoing = [(tgt, count) for (src, tgt), count in dfg.items() if src == activity]
+        total_incoming = sum(count for _, count in incoming)
+        total_outgoing = sum(count for _, count in outgoing)
         if activity in start_activities:
-            text += f"{activity} is a starting activity that begins the process ({start_activities[activity]} cases start here). "
+            execution_count = total_outgoing if total_outgoing > 0 else start_activities[activity]
+        elif activity in end_activities:
+            execution_count = total_incoming if total_incoming > 0 else end_activities[activity]
+        else:
+            execution_count = max(total_incoming, total_outgoing) if total_incoming > 0 or total_outgoing > 0 else 0
+        text = f"{activity} is an activity in this workflow. "
+        text += f"This activity executed {execution_count} times. "
+        
+        if execution_count == max_count:
+            text += f"This activity has the highest frequency among all activities. "
+        if execution_count == min_count:
+            text += f"This activity has the lowest frequency among all activities. "
+        if activity in start_activities:
+            text += f"{activity} is a starting activity that begins the workflow ({start_activities[activity]} cases start here). "
         if activity in end_activities:
-            text += f"{activity} is an ending activity that concludes the process ({end_activities[activity]} cases end here). "
+            text += f"{activity} is an ending activity that concludes the workflow ({end_activities[activity]} cases end here). "
         if incoming:
             incoming_desc = [f"{src} ({count} times)" for src, count in incoming]
             text += f"{activity} is preceded by: {', '.join(incoming_desc)}. "
         if outgoing:
             outgoing_desc = [f"{tgt} ({count} times)" for tgt, count in outgoing]
             text += f"{activity} is followed by: {', '.join(outgoing_desc)}. "
+        case_ids = activity_case_map.get(activity, [])
+        text += f"This activity appears in {len(case_ids)} cases. "
+        if case_ids:
+            text += f"Related Case IDs: {', '.join(case_ids)}. "
         activity_model = {
             "activity": activity,
             "incoming": incoming,
@@ -129,7 +156,8 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
             "is_end": activity in end_activities,
             "start_frequency": start_activities.get(activity, 0),
             "end_frequency": end_activities.get(activity, 0),
-            "execution_count": execution_count
+            "execution_count": execution_count,
+            "case_ids": case_ids
         }
         chunks.append({
             "text": text.strip(),
@@ -137,6 +165,112 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities):
             "activity_name": activity,
             "source": "activity_based_chunking",
             "data": activity_model
+        })
+    return chunks
+
+def extract_process_paths(df, min_frequency=1):
+    """Extract 2-activity process paths from the event log"""
+    print(f"Extracting 2-activity process paths (min frequency: {min_frequency})...")
+    
+    # Group by case and get activity sequences
+    case_sequences = []
+    for case_id, group in df.groupby('case_id'):
+        # Sort by timestamp to get correct order
+        sequence = group.sort_values('timestamp')['activity'].tolist()
+        case_sequences.append(sequence)
+    
+    # Extract only 2-activity paths (direct transitions)
+    path_frequencies = defaultdict(int)
+    
+    for sequence in case_sequences:
+        # Extract only paths of length 2 (direct activity transitions)
+        for i in range(len(sequence) - 1):
+            path = tuple(sequence[i:i + 2])  # Only 2-activity paths
+            path_frequencies[path] += 1
+    
+    # Filter by minimum frequency
+    frequent_paths = {path: freq for path, freq in path_frequencies.items() 
+                     if freq >= min_frequency}
+    
+    # Sort by frequency
+    sorted_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
+    
+    print(f"   Found {len(sorted_paths)} frequent 2-activity paths")
+    print("   Top 10 most frequent 2-activity transitions:")
+    for i, (path, freq) in enumerate(sorted_paths[:10], 1):
+        path_str = " → ".join(path)
+        print(f"   {i}. {path_str} (frequency: {freq})")
+    
+    return sorted_paths
+
+def generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths):
+    """Generate chunks based on process paths and their context"""
+    print("Generating process-based process model chunks...")
+    chunks = []
+    
+    # Find highest and lowest frequency
+    if frequent_paths:
+        frequencies = [freq for _, freq in frequent_paths]
+        max_freq = max(frequencies)
+        min_freq = min(frequencies)
+    else:
+        max_freq = min_freq = None
+
+    for i, (path, frequency) in enumerate(frequent_paths):
+        path_str = " → ".join(path)
+        text = f"Process path '{path_str}' is a process that occurs {frequency} times. "
+        path_length = len(path)
+        if path[0] in start_activities:
+            text += f"This path begins the process starting from {path[0]}. "
+        if path[-1] in end_activities:
+            text += f"This path concludes the process ending at {path[-1]}. "
+        text += "The complete execution sequence is: "
+        for j, activity in enumerate(path):
+            if j == 0:
+                text += f"starting with {activity}"
+            elif j == len(path) - 1:
+                text += f", and ending with {activity}"
+            else:
+                text += f", followed by {activity}"
+        text += ". "
+        predecessor_activities = set()
+        successor_activities = set()
+        for (src, tgt), count in dfg.items():
+            if tgt == path[0]:
+                predecessor_activities.add(src)
+            if src == path[-1]:
+                successor_activities.add(tgt)
+        if predecessor_activities:
+            pred_list = list(predecessor_activities)
+            text += f"This path is typically preceded by: {', '.join(pred_list)}. "
+        if successor_activities:
+            succ_list = list(successor_activities)
+            text += f"This path is typically followed by: {', '.join(succ_list)}. "
+        total_paths = len(frequent_paths)
+        rank = i + 1
+        text += f"This is the {rank} most frequent process path out of {total_paths} processes identified. "
+
+        if frequency == max_freq:
+            text += f"This path has the highest frequency among all process paths. "
+        if frequency == min_freq:
+            text += f"This path has the lowest frequency among all process paths. "
+        process_model = {
+            "path": path,
+            "path_string": path_str,
+            "frequency": frequency,
+            "length": path_length,
+            "rank": rank,
+            "starts_process": path[0] in start_activities,
+            "ends_process": path[-1] in end_activities,
+            "predecessors": list(predecessor_activities),
+            "successors": list(successor_activities)
+        }
+        chunks.append({
+            "text": text.strip(),
+            "type": "process_chunk",
+            "path_string": path_str,
+            "source": "process_based_chunking",
+            "data": process_model
         })
     return chunks
 
@@ -193,9 +327,9 @@ def extract_case_variants(df, min_cases_per_variant=1):
     
     return variant_stats
 
-def generate_case_based_chunks(dfg, start_activities, end_activities, variant_stats):
+def generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats):
     """Generate chunks based on case variants and their characteristics"""
-    print("Generating case-based process model chunks...")
+    print("Generating variant-based process model chunks...")
     chunks = []
     
     total_variants = len(variant_stats)
@@ -237,9 +371,7 @@ def generate_case_based_chunks(dfg, start_activities, end_activities, variant_st
         rank = i + 1
         percentage = (frequency / total_cases) * 100
         text += f"This is the {rank} most common variant out of {total_variants} variants identified, representing {percentage:.1f}% of all process executions. "
-        example_cases = cases[:3]
-        text += f"Example cases following this variant include: {', '.join(example_cases)}. "
-        example_cases = cases[:3]
+        example_cases = cases
         text += f"Example cases following this variant include: {', '.join(example_cases)}. "
         if rank == 1:
             text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "
@@ -271,9 +403,9 @@ def generate_case_based_chunks(dfg, start_activities, end_activities, variant_st
         }
         chunks.append({
             "text": text.strip(),
-            "type": "case_variant_chunk",
+            "type": "variant_chunk",
             "variant_string": variant_str,
-            "source": "case_based_chunking",
+            "source": "variant_based_chunking",
             "data": variant_model
         })
     return chunks
@@ -289,16 +421,20 @@ def connect_neo4j(uri, user, password):
         print(f"Failed to connect to Neo4j: {e}")
         return None
 
-def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, case_chunks, variant_stats):
-    print("Storing activity-based and case-based chunks and RAG data in Neo4j...")
+def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, process_chunks, variant_chunks, frequent_paths, variant_stats):
+    print("Storing activity-based, process-based, and variant-based chunks and RAG data in Neo4j...")
     with driver.session() as session:
         session.run("MATCH (n) DETACH DELETE n")
         print("   - Cleared existing data")
         try:
             session.run("DROP INDEX activity_chunk_vector_index IF EXISTS")
             session.run("DROP INDEX activity_chunk_fulltext_index IF EXISTS")
+            session.run("DROP INDEX process_chunk_vector_index IF EXISTS")
+            session.run("DROP INDEX process_chunk_fulltext_index IF EXISTS")
             session.run("DROP INDEX case_chunk_vector_index IF EXISTS")
             session.run("DROP INDEX case_chunk_fulltext_index IF EXISTS")
+            session.run("DROP INDEX variant_chunk_vector_index IF EXISTS")
+            session.run("DROP INDEX variant_chunk_fulltext_index IF EXISTS")
             print("   - Dropped existing indexes")
         except Exception as e:
             print(f"   - Note: {e}")
@@ -365,6 +501,68 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
             except Exception as e:
                 print(f"   - Error creating activity chunk {i}: {e}")
         
+        # Create ProcessPath nodes for the frequent paths
+        for i, (path, frequency) in enumerate(frequent_paths):
+            path_str = " → ".join(path)
+            session.run("""
+                CREATE (pp:ProcessPath {
+                    id: $id,
+                    path_string: $path_string,
+                    frequency: $frequency,
+                    length: $length,
+                    rank: $rank
+                })
+            """, 
+            id=i,
+            path_string=path_str,
+            frequency=frequency,
+            length=len(path),
+            rank=i + 1)
+            
+            # Link ProcessPath to Activities
+            for j, activity in enumerate(path):
+                session.run("""
+                    MATCH (pp:ProcessPath {id: $path_id})
+                    MATCH (a:Activity {name: $activity})
+                    MERGE (pp)-[:CONTAINS {position: $position}]->(a)
+                """, path_id=i, activity=activity, position=j)
+        
+        print(f"   - Created {len(frequent_paths)} ProcessPath nodes")
+        
+        # Store process chunks
+        print("   - Creating process chunk embeddings...")
+        for i, chunk in enumerate(process_chunks):
+            try:
+                response = openai.embeddings.create(
+                    input=chunk["text"], 
+                    model="text-embedding-3-large"
+                )
+                embedding = response.data[0].embedding
+                session.run("""
+                    CREATE (pc:ProcessChunk {
+                        id: $id,
+                        text: $text,
+                        path_string: $path_string,
+                        type: $type,
+                        source: $source,
+                        embedding: $embedding
+                    })
+                """, 
+                id=i, 
+                text=chunk["text"], 
+                path_string=chunk["path_string"],
+                type=chunk["type"],
+                source=chunk["source"],
+                embedding=embedding)
+                session.run("""
+                    MATCH (pc:ProcessChunk {id: $chunk_id})
+                    MATCH (pp:ProcessPath {id: $path_id})
+                    MERGE (pc)-[:DESCRIBES]->(pp)
+                """, chunk_id=i, path_id=i)
+                print(f"   - Created process chunk {i+1}/{len(process_chunks)} for '{chunk['path_string']}'")
+            except Exception as e:
+                print(f"   - Error creating process chunk {i}: {e}")
+        
         # Create CaseVariant nodes for the different variants
         for i, stats in enumerate(variant_stats):
             variant = stats['variant']
@@ -403,9 +601,9 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
         
         print(f"   - Created {len(variant_stats)} CaseVariant nodes")
         
-        # Store case chunks
-        print("   - Creating case variant chunk embeddings...")
-        for i, chunk in enumerate(case_chunks):
+        # Store variant chunks
+        print("   - Creating variant-based chunk embeddings...")
+        for i, chunk in enumerate(variant_chunks):
             try:
                 response = openai.embeddings.create(
                     input=chunk["text"], 
@@ -413,7 +611,7 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
                 )
                 embedding = response.data[0].embedding
                 session.run("""
-                    CREATE (cc:CaseChunk {
+                    CREATE (vc:VariantChunk {
                         id: $id,
                         text: $text,
                         variant_string: $variant_string,
@@ -429,13 +627,13 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
                 source=chunk["source"],
                 embedding=embedding)
                 session.run("""
-                    MATCH (cc:CaseChunk {id: $chunk_id})
+                    MATCH (vc:VariantChunk {id: $chunk_id})
                     MATCH (cv:CaseVariant {id: $variant_id})
-                    MERGE (cc)-[:DESCRIBES]->(cv)
+                    MERGE (vc)-[:DESCRIBES]->(cv)
                 """, chunk_id=i, variant_id=i)
-                print(f"   - Created case chunk {i+1}/{len(case_chunks)} for '{chunk['variant_string']}'")
+                print(f"   - Created variant chunk {i+1}/{len(variant_chunks)} for '{chunk['variant_string']}'")
             except Exception as e:
-                print(f"   - Error creating case chunk {i}: {e}")
+                print(f"   - Error creating variant chunk {i}: {e}")
         
         time.sleep(2)
         try:
@@ -444,8 +642,16 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
                 FOR (ac:ActivityChunk) ON EACH [ac.text, ac.activity_name]
             """)
             session.run("""
+                CREATE FULLTEXT INDEX process_chunk_fulltext_index IF NOT EXISTS
+                FOR (pc:ProcessChunk) ON EACH [pc.text, pc.path_string]
+            """)
+            session.run("""
                 CREATE FULLTEXT INDEX case_chunk_fulltext_index IF NOT EXISTS
                 FOR (cc:CaseChunk) ON EACH [cc.text, cc.variant_string]
+            """)
+            session.run("""
+                CREATE FULLTEXT INDEX variant_chunk_fulltext_index IF NOT EXISTS
+                FOR (vc:VariantChunk) ON EACH [vc.text, vc.variant_string]
             """)
             print("   - Created fulltext indexes")
         except Exception as e:
@@ -457,6 +663,19 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
                 session.run("""
                     CREATE VECTOR INDEX activity_chunk_vector_index IF NOT EXISTS
                     FOR (ac:ActivityChunk) ON (ac.embedding)
+                    OPTIONS {
+                        indexConfig: {
+                            `vector.dimensions`: 3072,
+                            `vector.similarity_function`: 'cosine'
+                        }
+                    }
+                """)
+            result = session.run("MATCH (pc:ProcessChunk) RETURN count(pc) as count")
+            node_count = result.single()["count"]
+            if node_count > 0:
+                session.run("""
+                    CREATE VECTOR INDEX process_chunk_vector_index IF NOT EXISTS
+                    FOR (pc:ProcessChunk) ON (pc.embedding)
                     OPTIONS {
                         indexConfig: {
                             `vector.dimensions`: 3072,
@@ -477,10 +696,30 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
                         }
                     }
                 """)
+            result = session.run("MATCH (vc:VariantChunk) RETURN count(vc) as count")
+            node_count = result.single()["count"]
+            if node_count > 0:
+                session.run("""
+                    CREATE VECTOR INDEX variant_chunk_vector_index IF NOT EXISTS
+                    FOR (vc:VariantChunk) ON (vc.embedding)
+                    OPTIONS {
+                        indexConfig: {
+                            `vector.dimensions`: 3072,
+                            `vector.similarity_function`: 'cosine'
+                        }
+                    }
+                """)
             print("   - Created vector indexes")
         except Exception as e:
             print(f"   - Critical error in vector index creation: {e}")
             traceback.print_exc()
+
+def build_activity_case_map(df):
+    activity_case_map = defaultdict(set)
+    for _, row in df.iterrows():
+        activity_case_map[row['activity']].add(str(row['case_id']))
+    # Sort the case IDs for each activity
+    return {k: sorted(list(v), key=lambda x: int(x) if x.isdigit() else x) for k, v in activity_case_map.items()}
 
 def setup_retriever(driver, chunk_type):
     openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -538,19 +777,45 @@ def setup_retriever(driver, chunk_type):
                            source: node.source
                        } AS metadata
             """
+        elif chunk_type == "ProcessChunk":
+            retrieval_query = """
+                MATCH (node)-[:DESCRIBES]->(path:ProcessPath)
+                RETURN node.text AS text,
+                       score AS score,
+                       {
+                           path_string: path.path_string,
+                           rank: path.rank,
+                           frequency: path.frequency,
+                           type: node.type,
+                           source: node.source
+                       } AS metadata
+            """
         elif chunk_type == "CaseChunk":
             retrieval_query = """
-        MATCH (node)-[:DESCRIBES]->(variant:CaseVariant)
-        RETURN node.text AS text,
-               score AS score,
-               {
-                   variant_string: variant.variant_string,
-                   rank: variant.rank,
-                   frequency: variant.frequency,
-                   type: node.type,
-                   source: node.source
-               } AS metadata
-    """
+                MATCH (node)-[:DESCRIBES]->(variant:CaseVariant)
+                RETURN node.text AS text,
+                       score AS score,
+                       {
+                           variant_string: variant.variant_string,
+                           rank: variant.rank,
+                           frequency: variant.frequency,
+                           type: node.type,
+                           source: node.source
+                       } AS metadata
+            """
+        elif chunk_type == "VariantChunk":
+            retrieval_query = """
+                MATCH (node)-[:DESCRIBES]->(variant:CaseVariant)
+                RETURN node.text AS text,
+                       score AS score,
+                       {
+                           variant_string: variant.variant_string,
+                           rank: variant.rank,
+                           frequency: variant.frequency,
+                           type: node.type,
+                           source: node.source
+                       } AS metadata
+            """
         else:
             raise ValueError("Unknown chunk_type")
         retriever = HybridCypherRetriever(
@@ -567,26 +832,27 @@ def setup_retriever(driver, chunk_type):
         traceback.print_exc()
         return None
 
-def graphrag_query_interface(rag_activity, rag_case):
+def graphrag_query_interface(rag_activity, rag_process, rag_variant):
     print("\n" + "="*80)
     print("PROCESS MINING EXPERT - GraphRAG Interface (Integrated)")
     print("="*80)
     print("I'm your process mining expert assistant. You can query:")
     print("1. Activity-based context (individual activities and their relationships)")
-    print("2. Case-based context (process variants and execution patterns)")
-    print("3. Both (merged results)")
+    print("2. Process-based context (2-activity sequences and transitions)")
+    print("3. Variant-based context (process variants and execution patterns)")
+    print("4. All combined (merged results)")
     print("\nType 'quit' to exit, 'help' for more examples")
     print("-" * 80)
     while True:
-        mode = input("\nChoose context: (1) Activity-based, (2) Case-based, (3) Both: ").strip()
+        mode = input("\nChoose context: (1) Activity, (2) Process, (3) Variant, (4) All: ").strip()
         if mode.lower() in ['quit', 'exit', 'q']:
             print("\nThanks for using Process Mining Expert! Keep optimizing those processes!")
             break
         if mode.lower() in ['help', 'examples', '?']:
             show_help()
             continue
-        if mode not in ['1', '2', '3']:
-            print("Please enter 1, 2, or 3")
+        if mode not in ['1', '2', '3', '4']:
+            print("Please enter 1, 2, 3, or 4")
             continue
         question = input("\nProcess Mining Question: ").strip()
         if not question:
@@ -596,13 +862,16 @@ def graphrag_query_interface(rag_activity, rag_case):
                 rag = rag_activity
                 context_label = "ACTIVITY-BASED"
             elif mode == "2":
-                rag = rag_case
-                context_label = "CASE-BASED"
+                rag = rag_process
+                context_label = "PROCESS-BASED"
+            elif mode == "3":
+                rag = rag_variant
+                context_label = "VARIANT-BASED"
             else:
-                # Both: retrieve from both and merge
+                # All: retrieve from all three and merge
                 print("\nRETRIEVED CHUNKS (Activity-Based):")
                 print("-" * 50)
-                search_result_a = rag_activity.retriever.search(question, top_k=3)
+                search_result_a = rag_activity.retriever.search(question, top_k=5)
                 for i, item in enumerate(search_result_a.items, 1):
                     content = str(item.content)
                     if content.startswith('<Record text="') and content.endswith('">'):
@@ -611,34 +880,48 @@ def graphrag_query_interface(rag_activity, rag_case):
                         actual_content = content
                     print(f"Activity Chunk {i}: {actual_content}")
                     print(f"   Metadata: {item.metadata}")
-                print("\nRETRIEVED CHUNKS (Case-Based):")
+                print("\nRETRIEVED CHUNKS (Process-Based):")
                 print("-" * 50)
-                search_result_c = rag_case.retriever.search(question, top_k=3)
-                for i, item in enumerate(search_result_c.items, 1):
+                search_result_p = rag_process.retriever.search(question, top_k=5)
+                for i, item in enumerate(search_result_p.items, 1):
                     content = str(item.content)
                     if content.startswith('<Record text="') and content.endswith('">'):
                         actual_content = content[14:-2]
                     else:
                         actual_content = content
-                    print(f"Case Chunk {i}: {actual_content}")
+                    print(f"Process Chunk {i}: {actual_content}")
                     print(f"   Metadata: {item.metadata}")
-                # Enhanced prompt with both
+                print("\nRETRIEVED CHUNKS (Variant-Based):")
+                print("-" * 50)
+                search_result_v = rag_variant.retriever.search(question, top_k=5)
+                for i, item in enumerate(search_result_v.items, 1):
+                    content = str(item.content)
+                    if content.startswith('<Record text="') and content.endswith('">'):
+                        actual_content = content[14:-2]
+                    else:
+                        actual_content = content
+                    print(f"Variant Chunk {i}: {actual_content}")
+                    print(f"   Metadata: {item.metadata}")
+                # Enhanced prompt with all three
                 answer_a = rag_activity.search(question).answer
-                answer_c = rag_case.search(question).answer
+                answer_p = rag_process.search(question).answer
+                answer_v = rag_variant.search(question).answer
                 enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
-Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to both ACTIVITY-BASED and CASE-BASED chunks.
+Manufacturing Process Context: You are analyzing a manufacturing process with activities like Material Preparation, CNC Programming, Turning Process, Quality Inspection, etc. You have access to ACTIVITY-BASED, PROCESS-BASED, and VARIANT-BASED chunks.
 
 Activity-Based Retrieved Information: {answer_a}
 
-Case-Based Retrieved Information: {answer_c}
+Process-Based Retrieved Information: {answer_p}
+
+Variant-Based Retrieved Information: {answer_v}
 
 User Question: {question}
 
-Please provide a detailed process mining analysis based on the retrieved information from both perspectives:"""
+Please provide a detailed process mining analysis based on the retrieved information from all three perspectives:"""
                 llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
                 enhanced_answer = llm.invoke(enhanced_prompt)
-                print(f"\n💡 ENHANCED ANSWER (COMBINED):")
+                print(f"\n💡 ENHANCED ANSWER (ALL COMBINED):")
                 print("-" * 50)
                 print(f"{enhanced_answer.content}")
                 continue
@@ -693,7 +976,7 @@ def setup_environment():
     return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, csv_file_path
 
 def main():
-    print("Starting Neo4j + PM4py + GraphRAG Test with Integrated Activity & Case Chunks")
+    print("Starting Neo4j + PM4py + GraphRAG Test with Integrated Activity, Process & Variant Chunks")
     print("=" * 70)
     neo4j_uri, neo4j_user, neo4j_password, openai_api_key, csv_file_path = setup_environment()
     if not openai_api_key:
@@ -723,22 +1006,29 @@ def main():
     log = prepare_pm4py_log(df)
     dfg, start_activities, end_activities = discover_process_model(log)
     print("Generating activity-based chunks for RAG...")
-    activity_chunks = generate_activity_based_chunks(dfg, start_activities, end_activities)
+    activity_chunks = generate_activity_based_chunks(dfg, start_activities, end_activities, build_activity_case_map(df))
     print(f"   Generated {len(activity_chunks)} activity-based chunks")
+    print("Extracting frequent process paths for RAG...")
+    frequent_paths = extract_process_paths(df, min_frequency=1)
+    print("Generating process-based chunks for RAG...")
+    process_chunks = generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths)
+    print(f"   Generated {len(process_chunks)} process-based chunks")
     print("Extracting case variants for RAG...")
     variant_stats = extract_case_variants(df, min_cases_per_variant=1)
-    print("Generating case-based chunks for RAG...")
-    case_chunks = generate_case_based_chunks(dfg, start_activities, end_activities, variant_stats)
-    print(f"   Generated {len(case_chunks)} case-based chunks")
+    print("Generating variant-based chunks for RAG...")
+    variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
+    print(f"   Generated {len(variant_chunks)} variant-based chunks")
     driver = connect_neo4j(neo4j_uri, neo4j_user, neo4j_password)
     if driver:
-        store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, case_chunks, variant_stats)
+        store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, process_chunks, variant_chunks, frequent_paths, variant_stats)
         retriever_activity = setup_retriever(driver, "ActivityChunk")
-        retriever_case = setup_retriever(driver, "CaseChunk")
-        if retriever_activity and retriever_case:
+        retriever_process = setup_retriever(driver, "ProcessChunk")
+        retriever_variant = setup_retriever(driver, "VariantChunk")
+        if retriever_activity and retriever_process and retriever_variant:
             rag_activity = GraphRAG(retriever=retriever_activity, llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1}))
-            rag_case = GraphRAG(retriever=retriever_case, llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1}))
-            graphrag_query_interface(rag_activity, rag_case)
+            rag_process = GraphRAG(retriever=retriever_process, llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1}))
+            rag_variant = GraphRAG(retriever=retriever_variant, llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1}))
+            graphrag_query_interface(rag_activity, rag_process, rag_variant)
         else:
             print("Failed to setup GraphRAG retrievers. Check your OpenAI API key and Neo4j indexes.")
         driver.close()
