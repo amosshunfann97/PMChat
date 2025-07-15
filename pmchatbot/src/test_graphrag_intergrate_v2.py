@@ -345,7 +345,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         frequency = stats['frequency']
         variant_length = len(variant)
         variant_str = " → ".join(variant)
-        text = f"Process variant '{variant_str}' represents a distinct execution pattern found in {frequency} cases ({frequency/total_cases*100:.1f}% of all cases). "
+        text = f"Process variant '{variant_str}' represents a distinct execution pattern found in {frequency} cases ({frequency/total_cases*100:.1f}% of all cases). (→ means 'followed by'). "
         text += f"This variant consists of {variant_length} activities. "
         
         # Add explicit longest/shortest info
@@ -358,21 +358,12 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
             text += f"This variant begins the process with {variant[0]}. "
         if variant[-1] in end_activities:
             text += f"This variant concludes the process with {variant[-1]}. "
-        text += "The complete execution sequence is: "
-        for j, activity in enumerate(variant):
-            if j == 0:
-                text += f"starting with {activity}"
-            elif j == len(variant) - 1:
-                text += f", and ending with {activity}"
-            else:
-                text += f", followed by {activity}"
-        text += ". "
         text += f"On average, cases following this variant have {stats['avg_activities']:.1f} total activities and {stats['avg_unique_activities']:.1f} unique activities. "
         rank = i + 1
         percentage = (frequency / total_cases) * 100
-        text += f"This is the {rank} most common variant out of {total_variants} variants identified, representing {percentage:.1f}% of all process executions. "
+        text += f"This variant representing {percentage:.1f}% of all workflow. "
         example_cases = cases
-        text += f"Example cases following this variant include: {', '.join(example_cases)}. "
+        text += f"Cases following this variant: {', '.join(example_cases)}. "
         if rank == 1:
             text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "
         elif rank == total_variants:
