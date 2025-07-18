@@ -86,11 +86,17 @@ def prepare_pm4py_log(df):
 def discover_process_model(log):
     print("Discovering process model...")
     dfg, start_activities, end_activities = pm4py.discover_dfg(log)
+    
+    # Add performance DFG discovery (only for process-based chunks)
+    print("Discovering performance DFG...")
+    performance_dfg, _, _ = pm4py.discover_performance_dfg(log, perf_aggregation_key="mean")
+    
     print(f"Process discovered:")
     print(f"   - DFG edges: {len(dfg)}")
+    print(f"   - Performance DFG edges: {len(performance_dfg)}")
     print(f"   - Start activities: {list(start_activities.keys())}")
     print(f"   - End activities: {list(end_activities.keys())}")
-    return dfg, start_activities, end_activities
+    return dfg, start_activities, end_activities, performance_dfg
 
 def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map):
     print("Generating activity-based process model chunks...")
@@ -120,14 +126,18 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
     for activity in all_activities:
         incoming = [(src, count) for (src, tgt), count in dfg.items() if tgt == activity]
         outgoing = [(tgt, count) for (src, tgt), count in dfg.items() if src == activity]
+        
         total_incoming = sum(count for _, count in incoming)
         total_outgoing = sum(count for _, count in outgoing)
+        
         if activity in start_activities:
             execution_count = total_outgoing if total_outgoing > 0 else start_activities[activity]
         elif activity in end_activities:
             execution_count = total_incoming if total_incoming > 0 else end_activities[activity]
         else:
             execution_count = max(total_incoming, total_outgoing) if total_incoming > 0 or total_outgoing > 0 else 0
+        execution_counts[activity] = execution_count
+
         text = f"{activity} is an activity in this workflow. "
         text += f"This activity executed {execution_count} times. "
         
@@ -139,16 +149,19 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
             text += f"{activity} is a starting activity that begins the workflow ({start_activities[activity]} cases start here). "
         if activity in end_activities:
             text += f"{activity} is an ending activity that concludes the workflow ({end_activities[activity]} cases end here). "
+        
         if incoming:
             incoming_desc = [f"{src} ({count} times)" for src, count in incoming]
             text += f"{activity} is preceded by: {', '.join(incoming_desc)}. "
         if outgoing:
             outgoing_desc = [f"{tgt} ({count} times)" for tgt, count in outgoing]
             text += f"{activity} is followed by: {', '.join(outgoing_desc)}. "
+            
         case_ids = activity_case_map.get(activity, [])
         text += f"This activity appears in {len(case_ids)} cases. "
         if case_ids:
             text += f"Related Case IDs: {', '.join(case_ids)}. "
+            
         activity_model = {
             "activity": activity,
             "incoming": incoming,
@@ -170,61 +183,90 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
     return chunks
 
 def extract_process_paths(df, min_frequency=1):
-    """Extract 2-activity process paths from the event log"""
-    print(f"Extracting 2-activity process paths (min frequency: {min_frequency})...")
+    """Extract 2-activity process paths from the event log with performance metrics"""
+    print(f"Extracting 2-activity process paths with performance (min frequency: {min_frequency})...")
     
-    # Group by case and get activity sequences
+    # Group by case and get activity sequences with timestamps
     case_sequences = []
+    case_timestamps = []
     for case_id, group in df.groupby('case_id'):
         # Sort by timestamp to get correct order
         sequence = group.sort_values('timestamp')['activity'].tolist()
+        timestamps = group.sort_values('timestamp')['timestamp'].tolist()
         case_sequences.append(sequence)
+        case_timestamps.append(timestamps)
     
-    # Extract only 2-activity paths (direct transitions)
+    # Extract only 2-activity paths (direct transitions) with performance
     path_frequencies = defaultdict(int)
+    path_durations = defaultdict(list)
     
-    for sequence in case_sequences:
+    for sequence, timestamps in zip(case_sequences, case_timestamps):
         # Extract only paths of length 2 (direct activity transitions)
         for i in range(len(sequence) - 1):
             path = tuple(sequence[i:i + 2])  # Only 2-activity paths
             path_frequencies[path] += 1
+            
+            # Calculate duration between activities
+            duration = (timestamps[i + 1] - timestamps[i]).total_seconds()
+            path_durations[path].append(duration)
     
-    # Filter by minimum frequency
-    frequent_paths = {path: freq for path, freq in path_frequencies.items() 
-                     if freq >= min_frequency}
+    # Filter by minimum frequency and calculate performance statistics
+    frequent_paths = {}
+    path_performance = {}
+    
+    for path, freq in path_frequencies.items():
+        if freq >= min_frequency:
+            frequent_paths[path] = freq
+            durations = path_durations[path]
+            path_performance[path] = {
+                'mean': sum(durations) / len(durations),
+                'min': min(durations),
+                'max': max(durations),
+                'count': len(durations)
+            }
     
     # Sort by frequency
     sorted_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
     
     print(f"   Found {len(sorted_paths)} frequent 2-activity paths")
-    print("   Top 10 most frequent 2-activity transitions:")
+    print("   Top 10 most frequent 2-activity transitions with performance:")
     for i, (path, freq) in enumerate(sorted_paths[:10], 1):
         path_str = " → ".join(path)
-        print(f"   {i}. {path_str} (frequency: {freq})")
+        perf = path_performance[path]
+        print(f"   {i}. {path_str} (frequency: {freq}, avg time: {perf['mean']:.2f}s)")
     
-    return sorted_paths
+    return sorted_paths, path_performance
 
-def generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths):
-    """Generate chunks based on process paths and their context"""
-    print("Generating process-based process model chunks...")
+def generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths, path_performance):
+    print("Generating process-based process model chunks with performance metrics...")
     chunks = []
-    
-    # Find highest and lowest frequency
     if frequent_paths:
         frequencies = [freq for _, freq in frequent_paths]
         max_freq = max(frequencies)
         min_freq = min(frequencies)
+        all_times = [path_performance[path]['mean'] for path, _ in frequent_paths]
+        min_time = min(all_times)
+        max_time = max(all_times)
     else:
         max_freq = min_freq = None
+        min_time = max_time = None
 
     for i, (path, frequency) in enumerate(frequent_paths):
         path_str = " → ".join(path)
-        text = f"Process path '{path_str}' is a process that occurs {frequency} times. "
-        path_length = len(path)
+        perf = path_performance[path]
+        text = f"Process '{path_str}' is a process that occurs {frequency} times. "
+        text += f"This process takes on average {perf['mean']:.2f} seconds to complete (min: {perf['min']:.2f}s, max: {perf['max']:.2f}s). "
+        if perf['mean'] == min_time:
+            text += "This is the fastest process among all discovered processes. "
+        if perf['mean'] == max_time:
+            text += "This is the slowest process among all discovered processes. "
+            text += "This path is likely the bottleneck in the process due to its long average execution time. "
+        
         if path[0] in start_activities:
-            text += f"This path begins the process starting from {path[0]}. "
+            text += f"This process begins starting from {path[0]}. "
         if path[-1] in end_activities:
-            text += f"This path concludes the process ending at {path[-1]}. "
+            text += f"This process concludes at {path[-1]}. "
+            
         text += "The complete execution sequence is: "
         for j, activity in enumerate(path):
             if j == 0:
@@ -234,6 +276,7 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
             else:
                 text += f", followed by {activity}"
         text += ". "
+        
         predecessor_activities = set()
         successor_activities = set()
         for (src, tgt), count in dfg.items():
@@ -241,26 +284,30 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
                 predecessor_activities.add(src)
             if src == path[-1]:
                 successor_activities.add(tgt)
+                
         if predecessor_activities:
             pred_list = list(predecessor_activities)
-            text += f"This path is typically preceded by: {', '.join(pred_list)}. "
+            text += f"This process is typically preceded by: {', '.join(pred_list)}. "
         if successor_activities:
             succ_list = list(successor_activities)
-            text += f"This path is typically followed by: {', '.join(succ_list)}. "
+            text += f"This process is typically followed by: {', '.join(succ_list)}. "
+            
         total_paths = len(frequent_paths)
         rank = i + 1
-        text += f"This is the {rank} most frequent process path out of {total_paths} processes identified. "
+        text += f"This is the {rank} most frequent process out of {total_paths} processes identified. "
 
         if frequency == max_freq:
-            text += f"This path has the highest frequency among all process paths. "
+            text += f"This process has the highest frequency among all processes. "
         if frequency == min_freq:
-            text += f"This path has the lowest frequency among all process paths. "
+            text += f"This process has the lowest frequency among all processes. "
+            
         process_model = {
             "path": path,
             "path_string": path_str,
             "frequency": frequency,
-            "length": path_length,
+            "length": len(path),
             "rank": rank,
+            "performance": perf,
             "starts_process": path[0] in start_activities,
             "ends_process": path[-1] in end_activities,
             "predecessors": list(predecessor_activities),
@@ -276,23 +323,31 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
     return chunks
 
 def extract_case_variants(df, min_cases_per_variant=1):
-    """Extract different case variants (process patterns) from the event log"""
-    print(f"Extracting case variants (min cases per variant: {min_cases_per_variant})...")
+    """Extract different case variants (process patterns) from the event log with performance metrics"""
+    print(f"Extracting case variants with performance (min cases per variant: {min_cases_per_variant})...")
     
-    # Group by case and get activity sequences
+    # Group by case and get activity sequences with timestamps
     case_sequences = {}
     case_metadata = {}
+    case_durations = {}
     
     for case_id, group in df.groupby('case_id'):
         # Sort by timestamp to get correct order
         sorted_group = group.sort_values('timestamp')
         sequence = tuple(sorted_group['activity'].tolist())
+        timestamps = sorted_group['timestamp'].tolist()
+        
         case_sequences[case_id] = sequence
+        
+        # Calculate case duration
+        case_duration = (timestamps[-1] - timestamps[0]).total_seconds()
+        case_durations[case_id] = case_duration
         
         # Collect case metadata
         case_metadata[case_id] = {
             'num_activities': len(sequence),
-            'unique_activities': len(set(sequence))
+            'unique_activities': len(set(sequence)),
+            'duration': case_duration
         }
     
     # Group cases by their activity sequences (variants)
@@ -308,69 +363,79 @@ def extract_case_variants(df, min_cases_per_variant=1):
     sorted_variants = sorted(frequent_variants.items(), key=lambda x: len(x[1]), reverse=True)
     
     print(f"   Found {len(sorted_variants)} case variants")
-    print("   Top 10 most frequent variants:")
+    print("   Top 10 most frequent variants with performance:")
     for i, (variant, cases) in enumerate(sorted_variants[:10], 1):
         variant_str = " → ".join(variant)
-        print(f"   {i}. {variant_str} ({len(cases)} cases)")
+        avg_duration = sum(case_durations[c] for c in cases) / len(cases)
+        print(f"   {i}. {variant_str} ({len(cases)} cases, avg duration: {avg_duration:.2f}s)")
     
-    # Calculate variant statistics
+    # Calculate variant statistics with performance
     variant_stats = []
     for variant, cases in sorted_variants:
+        durations = [case_durations[c] for c in cases]
         stats = {
             'variant': variant,
             'cases': cases,
             'frequency': len(cases),
             'avg_activities': sum(case_metadata[c]['num_activities'] for c in cases) / len(cases),
-            'avg_unique_activities': sum(case_metadata[c]['unique_activities'] for c in cases) / len(cases)
+            'avg_unique_activities': sum(case_metadata[c]['unique_activities'] for c in cases) / len(cases),
+            'avg_duration': sum(durations) / len(durations),
+            'min_duration': min(durations),
+            'max_duration': max(durations),
+            'total_duration': sum(durations)
         }
-        
         variant_stats.append(stats)
     
     return variant_stats
 
 def generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats):
-    """Generate chunks based on case variants and their characteristics"""
-    print("Generating variant-based process model chunks...")
+    print("Generating variant-based process model chunks with performance metrics...")
     chunks = []
-    
     total_variants = len(variant_stats)
     total_cases = sum(stats['frequency'] for stats in variant_stats)
-    # Find longest and shortest variant lengths
     lengths = [len(stats['variant']) for stats in variant_stats]
     max_length = max(lengths)
     min_length = min(lengths)
-    
+    durations = [stats['avg_duration'] for stats in variant_stats]
+    min_duration = min(durations)
+    max_duration = max(durations)
+
     for i, stats in enumerate(variant_stats):
         variant = stats['variant']
         cases = stats['cases']
         frequency = stats['frequency']
         variant_length = len(variant)
         variant_str = " → ".join(variant)
-        text = f"Process variant '{variant_str}' represents a distinct execution pattern found in {frequency} cases ({frequency/total_cases*100:.1f}% of all cases). (→ means 'followed by'). "
-        text += f"This variant consists of {variant_length} activities. "
+        text = f"Process variant '{variant_str}' represents an execution pattern found in {frequency} cases ({frequency/total_cases*100:.1f}% of all cases). (→ means 'followed by'). "
+        text += f"This variant consists of {variant_length} activities and takes on average {stats['avg_duration']:.2f} seconds to complete (min: {stats['min_duration']:.2f}s, max: {stats['max_duration']:.2f}s). "
+        if stats['avg_duration'] == min_duration:
+            text += "This is the fastest variant. "
+        if stats['avg_duration'] == max_duration:
+            text += "This is the slowest variant. "
         
         # Add explicit longest/shortest info
         if variant_length == max_length:
-            text += "This is the longest variant among all discovered variants. "
+            text += "This is the longest variant. "
         if variant_length == min_length:
-            text += "This is the shortest variant among all discovered variants. "
+            text += "This is the shortest variant. "
         
-        if variant[0] in start_activities:
-            text += f"This variant begins the process with {variant[0]}. "
-        if variant[-1] in end_activities:
-            text += f"This variant concludes the process with {variant[-1]}. "
-        text += f"On average, cases following this variant have {stats['avg_activities']:.1f} total activities and {stats['avg_unique_activities']:.1f} unique activities. "
+        start_act, end_act = variant[0], variant[-1]
+        text += f"This variant starts with {start_act}, ends with {end_act}. "
+
         rank = i + 1
         percentage = (frequency / total_cases) * 100
-        text += f"This variant representing {percentage:.1f}% of all workflow. "
+        text += f"This variant represents {percentage:.1f}% among all variants. "
+
         example_cases = cases
         text += f"Cases following this variant: {', '.join(example_cases)}. "
+        
         if rank == 1:
             text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "
         elif rank == total_variants:
             text += f"This is the least common process execution pattern (rank {rank} of {total_variants}). "
         else:
             text += f"This is a mid-ranked variant (rank {rank} of {total_variants}). "
+            
         unique_activities = set(variant)
         common_activities = set()
         for other_stats in variant_stats:
@@ -379,6 +444,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         variant_specific = unique_activities - common_activities
         if variant_specific:
             text += f"This variant includes unique activities not found in other common variants: {', '.join(variant_specific)}. "
+            
         variant_model = {
             "variant": variant,
             "variant_string": variant_str,
@@ -387,6 +453,12 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
             "percentage": percentage,
             "length": variant_length,
             "rank": rank,
+            "performance": {
+                'avg_duration': stats['avg_duration'],
+                'min_duration': stats['min_duration'],
+                'max_duration': stats['max_duration'],
+                'total_duration': stats['total_duration']
+            },
             "starts_process": variant[0] in start_activities,
             "ends_process": variant[-1] in end_activities,
             "avg_activities": stats['avg_activities'],
@@ -981,8 +1053,8 @@ def setup_environment():
     return neo4j_uri, neo4j_user, neo4j_password, openai_api_key, csv_file_path
 
 def main():
-    print("Starting Neo4j + PM4py + GraphRAG Test with LOCAL EMBEDDING MODEL")
-    print("=" * 70)
+    print("Starting Neo4j + PM4py + GraphRAG Test with LOCAL EMBEDDING MODEL and PERFORMANCE METRICS")
+    print("=" * 80)
     
     # Initialize local embedder first
     local_embedder = get_local_embedder()
@@ -1014,23 +1086,23 @@ def main():
         return
     
     log = prepare_pm4py_log(df)
-    dfg, start_activities, end_activities = discover_process_model(log)
+    dfg, start_activities, end_activities, performance_dfg = discover_process_model(log)
     
     print("Generating activity-based chunks for RAG...")
     activity_chunks = generate_activity_based_chunks(dfg, start_activities, end_activities, build_activity_case_map(df))
     print(f"   Generated {len(activity_chunks)} activity-based chunks")
     
-    print("Extracting frequent process paths for RAG...")
-    frequent_paths = extract_process_paths(df, min_frequency=1)
+    print("Extracting frequent process paths with performance for RAG...")
+    frequent_paths, path_performance = extract_process_paths(df, min_frequency=1)
     
-    print("Generating process-based chunks for RAG...")
-    process_chunks = generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths)
+    print("Generating process-based chunks with performance for RAG...")
+    process_chunks = generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths, path_performance)
     print(f"   Generated {len(process_chunks)} process-based chunks")
     
-    print("Extracting case variants for RAG...")
+    print("Extracting case variants with performance for RAG...")
     variant_stats = extract_case_variants(df, min_cases_per_variant=1)
     
-    print("Generating variant-based chunks for RAG...")
+    print("Generating variant-based chunks with performance for RAG...")
     variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
     print(f"   Generated {len(variant_chunks)} variant-based chunks")
     
@@ -1039,7 +1111,7 @@ def main():
         # Force clean indexes first
         force_clean_neo4j_indexes(driver)
         
-        # Then store chunks
+        # Store chunks
         store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, process_chunks, variant_chunks, frequent_paths, variant_stats, local_embedder)
         
         # Pass local_embedder to retriever setup
