@@ -1,5 +1,6 @@
 from config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS
 from neo4j_graphrag.llm import OpenAILLM
+from config.settings import Config
 
 def show_help():
     """Display example questions to help users"""
@@ -79,7 +80,7 @@ User Question: {question}
 
 Please provide a detailed process mining analysis based on the retrieved information:"""
 
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+    llm = OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
     enhanced_answer = llm.invoke(enhanced_prompt)
     
     print(f"\n💡 ANSWER:")
@@ -133,7 +134,7 @@ User Question: {question}
 
 Please provide a detailed process mining analysis based on the retrieved information from all three perspectives:"""
 
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+    llm = OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
     enhanced_answer = llm.invoke(enhanced_prompt)
     
     print(f"\n💡 ANSWER (ALL COMBINED):")

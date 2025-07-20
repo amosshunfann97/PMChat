@@ -82,15 +82,15 @@ def main():
             if retriever_activity and retriever_process and retriever_variant:
                 rag_activity = GraphRAG(
                     retriever=retriever_activity, 
-                    llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+                    llm=OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
                 )
                 rag_process = GraphRAG(
                     retriever=retriever_process, 
-                    llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+                    llm=OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
                 )
                 rag_variant = GraphRAG(
                     retriever=retriever_variant, 
-                    llm=OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0.1})
+                    llm=OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
                 )
                 
                 # Start query interface

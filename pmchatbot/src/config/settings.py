@@ -56,6 +56,11 @@ class Config:
     NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
     NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    
     CSV_FILE_PATH = os.getenv("CSV_FILE_PATH")
     EMBEDDING_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH", "intfloat/multilingual-e5-large")
+    
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+    LLM_MODEL_TEMPERATURE = float(os.getenv("LLM_MODEL_TEMPERATURE", "0.1"))
+    LLM_MODEL_PARAMS = {"temperature": LLM_MODEL_TEMPERATURE}
