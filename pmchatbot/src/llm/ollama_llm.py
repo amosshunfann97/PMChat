@@ -36,7 +36,7 @@ class OllamaLLM(LLMInterface):
                 options={
                     'temperature': self._model_params.get("temperature", 0.1),
                     'top_p': self._model_params.get("top_p", 0.9),
-                    'num_predict': self._model_params.get("max_tokens", 2048),
+                    'num_predict': self._model_params.get("max_tokens", 10000),
                     'stop': self._model_params.get("stop", [])
                 }
             )

@@ -3,15 +3,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PROCESS_MINING_CONTEXT = """You are a process mining expert. 
+PROCESS_MINING_CONTEXT = """You are a process mining expert. Please read thoroughly the {context_label}. 
+
+TERMINOLOGY DEFINITIONS (CRITICAL FOR ACCURATE RESPONSES):
+- "Execution count": Total number of times an activity was performed across ALL cases/instances
+- "Frequency": For processes/transitions, number of times a specific path/transition occurred
+- "Appears in X cases": Number of unique case IDs where an activity is present (case coverage)
+- "Activity": A single task or step in the process (e.g., "Material Preparation", "Turning Process")
+- "Process/Path": A sequence of activities, typically 2-activity transitions (e.g., "Material Preparation → CNC Programming")
+- "Variant": A complete execution pattern from start to finish (e.g., "Material Preparation → CNC Programming → Turning Process → Final Inspection")
+- "Cases": Individual process instances or workflow executions (identified by case_id)
+
+IMPORTANT: Always distinguish between:
+- Activity execution count (how many times performed) vs. case appearances (in how many cases)
+- Process frequency (transition occurrences) vs. activity execution count
+- Variant frequency (how many cases follow this pattern) vs. individual activity counts
 
 IMPORTANT: Always check if the user is asking a simple factual question about the process data. If so, provide ONLY the direct answer based on the data.
 
 For simple questions like:
-- "How many times does X follow Y?"
-- "What activities come after X?"
-- "What is the flow from start to finish?"
-- "Which activities are start/end activities?"
+- "How many times does X follow Y?" → Answer with process frequency data
+- "What activities come after X?" → List the outgoing activities
+- "What is the flow from start to finish?" → Describe the process variants
+- "Which activities are start/end activities?" → Identify start/end activities
+- "Which activity was executed the most?" → Answer with activity execution count
 
 Provide only the factual answer from the process mining data without additional analysis.
 

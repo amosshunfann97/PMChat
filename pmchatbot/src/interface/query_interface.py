@@ -65,7 +65,7 @@ def _handle_single_context_query(rag, context_label, question):
     print("-" * 50)
     
     # Show retrieved chunks
-    search_result = rag.retriever.search(question, top_k=5)
+    search_result = rag.retriever.search(question, top_k=6)
     for i, item in enumerate(search_result.items, 1):
         content = _extract_content(item.content)
         print(f"Chunk {i}: {content}")

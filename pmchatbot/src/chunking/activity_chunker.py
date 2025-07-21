@@ -40,14 +40,17 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
         else:
             execution_count = max(total_incoming, total_outgoing) if total_incoming > 0 or total_outgoing > 0 else 0
         execution_counts[activity] = execution_count
+        
 
         text = f"{activity} is an activity in this workflow. "
-        text += f"This activity executed {execution_count} times. "
         
         if execution_count == max_count:
-            text += f"This activity has the highest frequency among all activities. "
+            text += f"This activity has the highest/most frequency or execution count among all activities. "
         if execution_count == min_count:
-            text += f"This activity has the lowest frequency among all activities. "
+            text += f"This activity has the lowest/least frequency or execution count among all activities. "
+            
+        text += f"This activity executed {execution_count} times. "
+        
         if activity in start_activities:
             text += f"{activity} is a starting activity that begins the workflow ({start_activities[activity]} cases start here). "
         if activity in end_activities:
@@ -62,8 +65,8 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
             
         case_ids = activity_case_map.get(activity, [])
         text += f"This activity appears in {len(case_ids)} cases. "
-        if case_ids:
-            text += f"Related Case IDs: {', '.join(case_ids)}. "
+        # if case_ids:
+        #     text += f"Case IDs linked to this activity: {', '.join(case_ids)}. "
             
         activity_model = {
             "activity": activity,
