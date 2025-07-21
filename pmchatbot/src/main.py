@@ -9,12 +9,14 @@ from embeddings.local_embedder import get_local_embedder
 from database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
 from database.data_storage import store_chunks_in_neo4j
 from retrieval.retriever_setup import setup_retriever
+from retrieval.enhanced_retriever import setup_enhanced_retriever
 from interface.query_interface import graphrag_query_interface
-from neo4j_graphrag.generation import GraphRAG
-from llm.llm_factory import get_llm, get_current_model_info
+from llm.llm_factory import get_current_model_info
 import torch
 
 config = Config()
+
+print("DEBUG: main.py USE_RERANKER =", config.USE_RERANKER)
 
 def setup_openai():
     """Setup OpenAI API (only if using OpenAI)"""
@@ -102,26 +104,20 @@ def main():
             # 3. Load embedding model on CPU for query embedding
             local_embedder_cpu = get_local_embedder(device="cpu")
             
-            # 4. Pass CPU embedder to retrievers
-            retriever_activity = setup_retriever(driver, "ActivityChunk", local_embedder_cpu)
-            retriever_process = setup_retriever(driver, "ProcessChunk", local_embedder_cpu)
-            retriever_variant = setup_retriever(driver, "VariantChunk", local_embedder_cpu)
-            
+            # 4. Pass CPU embedder to enhanced retrievers
+            retriever_activity = setup_enhanced_retriever(driver, "ActivityChunk", local_embedder_cpu, use_reranker=None)
+            retriever_process = setup_enhanced_retriever(driver, "ProcessChunk", local_embedder_cpu, use_reranker=None)
+            retriever_variant = setup_enhanced_retriever(driver, "VariantChunk", local_embedder_cpu, use_reranker=None)
+
             if retriever_activity and retriever_process and retriever_variant:
                 # 5. Release CPU embedder and clear GPU cache
                 del local_embedder_cpu
                 import torch
                 torch.cuda.empty_cache()
                 
-                # 6. Load Ollama LLM (this happens in get_llm())
-                llm = get_llm()
+                # 6. Use EnhancedRetriever objects directly for queries
+                graphrag_query_interface(retriever_activity, retriever_process, retriever_variant)
                 
-                rag_activity = GraphRAG(retriever=retriever_activity, llm=llm)
-                rag_process = GraphRAG(retriever=retriever_process, llm=llm)
-                rag_variant = GraphRAG(retriever=retriever_variant, llm=llm)
-                
-                # 7. Use Ollama LLM for queries
-                graphrag_query_interface(rag_activity, rag_process, rag_variant)
             else:
                 print("Failed to setup GraphRAG retrievers. Check your local embedding model and Neo4j indexes.")
         

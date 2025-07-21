@@ -87,6 +87,15 @@ class Config:
         # Ollama config
         self.LLM_MODEL_NAME_OLLAMA = os.getenv("LLM_MODEL_NAME_OLLAMA", "qwen3:4b")
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        
+        # Reranker config
+        self.USE_RERANKER = os.getenv("USE_RERANKER", "true").lower() == "true"
+        self.RERANKER_MODEL_PATH = os.getenv("RERANKER_MODEL_PATH", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+        self.RERANKER_TOP_K = int(os.getenv("RERANKER_TOP_K", "5"))
+        self.RERANKER_DEVICE = os.getenv("RERANKER_DEVICE", "auto")
+        
+        # Retrieval config
+        self.RETRIEVER_TOP_K = int(os.getenv("RETRIEVER_TOP_K", "15"))
     
     @property
     def CURRENT_MODEL_NAME(self):

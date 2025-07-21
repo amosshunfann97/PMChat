@@ -64,20 +64,22 @@ def _handle_single_context_query(rag, context_label, question):
     print(f"\nRETRIEVED CHUNKS ({context_label}):")
     print("-" * 50)
     
-    # Show retrieved chunks
-    search_result = rag.retriever.search(question, top_k=6)
+    search_result = rag.search(question)
     for i, item in enumerate(search_result.items, 1):
         content = _extract_content(item.content)
+        metadata = item.metadata or {}
+        
         print(f"Chunk {i}: {content}")
-        print(f"   Metadata: {item.metadata}")
+        print(f"   Metadata: {metadata}")
     
     # Get enhanced answer
     result = rag.search(question)
+    retrieved_info = "\n".join(_extract_content(item.content) for item in result.items)
     enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
 
 Manufacturing Process Context: You are analyzing a manufacturing process with several activities. You have access to {context_label} chunks.
 
-Retrieved Information: {result.answer}
+Retrieved Information: {retrieved_info}
 
 User Question: {question}
 
@@ -95,7 +97,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     # Show retrieved chunks from all contexts
     print("\nRETRIEVED CHUNKS (Activity-Based):")
     print("-" * 50)
-    search_result_a = rag_activity.retriever.search(question, top_k=5)
+    search_result_a = rag_activity.search(question, top_k=config.TOP_K)
     for i, item in enumerate(search_result_a.items, 1):
         content = _extract_content(item.content)
         print(f"Activity Chunk {i}: {content}")
@@ -103,7 +105,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     
     print("\nRETRIEVED CHUNKS (Process-Based):")
     print("-" * 50)
-    search_result_p = rag_process.retriever.search(question, top_k=5)
+    search_result_p = rag_process.search(question, top_k=config.TOP_K)
     for i, item in enumerate(search_result_p.items, 1):
         content = _extract_content(item.content)
         print(f"Process Chunk {i}: {content}")
@@ -111,16 +113,16 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     
     print("\nRETRIEVED CHUNKS (Variant-Based):")
     print("-" * 50)
-    search_result_v = rag_variant.retriever.search(question, top_k=5)
+    search_result_v = rag_variant.search(question, top_k=config.TOP_K)
     for i, item in enumerate(search_result_v.items, 1):
         content = _extract_content(item.content)
         print(f"Variant Chunk {i}: {content}")
         print(f"   Metadata: {item.metadata}")
     
     # Get answers from all contexts
-    answer_a = rag_activity.search(question).answer
-    answer_p = rag_process.search(question).answer
-    answer_v = rag_variant.search(question).answer
+    answer_a = "\n".join(_extract_content(item.content) for item in rag_activity.search(question).items)
+    answer_p = "\n".join(_extract_content(item.content) for item in rag_process.search(question).items)
+    answer_v = "\n".join(_extract_content(item.content) for item in rag_variant.search(question).items)
     
     # Create enhanced prompt with all three contexts
     enhanced_prompt = f"""{PROCESS_MINING_CONTEXT}
