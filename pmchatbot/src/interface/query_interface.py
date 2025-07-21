@@ -1,6 +1,7 @@
-from config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS
-from neo4j_graphrag.llm import OpenAILLM
-from config.settings import Config
+from config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS, Config
+from llm.llm_factory import get_llm, get_current_model_info
+
+config = Config()
 
 def show_help():
     """Display example questions to help users"""
@@ -12,8 +13,10 @@ def show_help():
 
 def graphrag_query_interface(rag_activity, rag_process, rag_variant):
     """Interactive query interface for GraphRAG"""
+    model_info = get_current_model_info()
+    
     print("\n" + "="*80)
-    print("PROCESS MINING EXPERT - GraphRAG Interface (Integrated)")
+    print(f"PROCESS MINING EXPERT - GraphRAG Interface (Using {model_info['type'].upper()}: {model_info['model_name']})")
     print("="*80)
     print("I'm your process mining expert assistant. You can query:")
     print("1. Activity-based context (individual activities and their relationships)")
@@ -80,7 +83,7 @@ User Question: {question}
 
 Please provide a detailed process mining analysis based on the retrieved information:"""
 
-    llm = OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
+    llm = get_llm()
     enhanced_answer = llm.invoke(enhanced_prompt)
     
     print(f"\n💡 ANSWER:")
@@ -134,7 +137,7 @@ User Question: {question}
 
 Please provide a detailed process mining analysis based on the retrieved information from all three perspectives:"""
 
-    llm = OpenAILLM(model_name=Config.LLM_MODEL_NAME, model_params=Config.LLM_MODEL_PARAMS)
+    llm = get_llm()
     enhanced_answer = llm.invoke(enhanced_prompt)
     
     print(f"\n💡 ANSWER (ALL COMBINED):")

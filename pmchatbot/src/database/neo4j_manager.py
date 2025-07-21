@@ -2,12 +2,14 @@ import neo4j
 import time
 from config.settings import Config
 
+config = Config()
+
 def connect_neo4j():
     """Connect to Neo4j database"""
     try:
         driver = neo4j.GraphDatabase.driver(
-            Config.NEO4J_URI, 
-            auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD)
+            config.NEO4J_URI, 
+            auth=(config.NEO4J_USER, config.NEO4J_PASSWORD)
         )
         with driver.session() as session:
             session.run("RETURN 1")

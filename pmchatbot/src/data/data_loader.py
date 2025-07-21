@@ -2,9 +2,11 @@ import pandas as pd
 import os
 from config.settings import Config
 
+config = Config()
+
 def load_csv_data():
     """Load and validate CSV data"""
-    csv_file_path = Config.CSV_FILE_PATH
+    csv_file_path = config.CSV_FILE_PATH
     
     if not csv_file_path:
         raise ValueError("CSV_FILE_PATH environment variable not set!")

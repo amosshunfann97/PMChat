@@ -53,14 +53,31 @@ EXAMPLE_QUESTIONS = [
 ]
 
 class Config:
-    NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
-    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+    def __init__(self):
+        self.NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
+        self.NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+        self.NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+        self.CSV_FILE_PATH = os.getenv("CSV_FILE_PATH")
+        self.EMBEDDING_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH", "intfloat/multilingual-e5-large")
+        
+        # LLM config
+        self.LLM_TYPE = os.getenv("LLM_TYPE", "ollama")  # "openai" or "ollama"
+        self.LLM_MODEL_TEMPERATURE = float(os.getenv("LLM_MODEL_TEMPERATURE", "0.1"))
+        self.LLM_MODEL_PARAMS = {"temperature": self.LLM_MODEL_TEMPERATURE}
+        
+        # OpenAI config
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        self.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+        
+        # Ollama config
+        self.LLM_MODEL_NAME_OLLAMA = os.getenv("LLM_MODEL_NAME_OLLAMA", "qwen3:4b")
+        self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     
-    CSV_FILE_PATH = os.getenv("CSV_FILE_PATH")
-    EMBEDDING_MODEL_PATH = os.getenv("EMBEDDING_MODEL_PATH", "intfloat/multilingual-e5-large")
-    
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
-    LLM_MODEL_TEMPERATURE = float(os.getenv("LLM_MODEL_TEMPERATURE", "0.1"))
-    LLM_MODEL_PARAMS = {"temperature": LLM_MODEL_TEMPERATURE}
+    @property
+    def CURRENT_MODEL_NAME(self):
+        if self.LLM_TYPE.lower() == "ollama":
+            return self.LLM_MODEL_NAME_OLLAMA
+        elif self.LLM_TYPE.lower() == "openai":
+            return self.LLM_MODEL_NAME
+        else:
+            raise ValueError(f"Unsupported LLM type: {self.LLM_TYPE}")
