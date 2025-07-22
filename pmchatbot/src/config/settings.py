@@ -87,6 +87,7 @@ class Config:
         # Ollama config
         self.LLM_MODEL_NAME_OLLAMA = os.getenv("LLM_MODEL_NAME_OLLAMA", "qwen3:4b")
         self.OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.OLLAMA_HIDE_THINKING = os.getenv("OLLAMA_HIDE_THINKING", "true").lower() == "true"
         
         # Reranker config
         self.USE_RERANKER = os.getenv("USE_RERANKER", "true").lower() == "true"
