@@ -97,7 +97,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     # Show retrieved chunks from all contexts
     print("\nRETRIEVED CHUNKS (Activity-Based):")
     print("-" * 50)
-    search_result_a = rag_activity.search(question, top_k=config.TOP_K)
+    search_result_a = rag_activity.search(question, top_k=config.RERANKER_TOP_K)
     for i, item in enumerate(search_result_a.items, 1):
         content = _extract_content(item.content)
         print(f"Activity Chunk {i}: {content}")
@@ -105,7 +105,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     
     print("\nRETRIEVED CHUNKS (Process-Based):")
     print("-" * 50)
-    search_result_p = rag_process.search(question, top_k=config.TOP_K)
+    search_result_p = rag_process.search(question, top_k=config.RERANKER_TOP_K)
     for i, item in enumerate(search_result_p.items, 1):
         content = _extract_content(item.content)
         print(f"Process Chunk {i}: {content}")
@@ -113,7 +113,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
     
     print("\nRETRIEVED CHUNKS (Variant-Based):")
     print("-" * 50)
-    search_result_v = rag_variant.search(question, top_k=config.TOP_K)
+    search_result_v = rag_variant.search(question, top_k=config.RERANKER_TOP_K)
     for i, item in enumerate(search_result_v.items, 1):
         content = _extract_content(item.content)
         print(f"Variant Chunk {i}: {content}")

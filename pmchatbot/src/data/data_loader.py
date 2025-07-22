@@ -52,3 +52,15 @@ def build_activity_case_map(df):
     # Sort the case IDs for each activity
     return {k: sorted(list(v), key=lambda x: int(x) if x.isdigit() else x) 
             for k, v in activity_case_map.items()}
+
+def list_part_descs(df):
+    """List all unique part_desc values in the DataFrame."""
+    if 'part_desc' not in df.columns:
+        raise ValueError("No 'part_desc' column found in the data.")
+    return sorted(df['part_desc'].unique())
+
+def filter_by_part_desc(df, part_desc):
+    """Filter the DataFrame by a specific part_desc value."""
+    if 'part_desc' not in df.columns:
+        raise ValueError("No 'part_desc' column found in the data.")
+    return df[df['part_desc'] == part_desc].copy()

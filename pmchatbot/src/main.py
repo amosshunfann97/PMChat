@@ -1,6 +1,6 @@
 import openai
 from config.settings import Config
-from data.data_loader import load_csv_data, build_activity_case_map
+from data.data_loader import load_csv_data, build_activity_case_map, list_part_descs, filter_by_part_desc
 from data.pm4py_processor import prepare_pm4py_log, discover_process_model
 from chunking.activity_chunker import generate_activity_based_chunks
 from chunking.process_chunker import extract_process_paths, generate_process_based_chunks
@@ -13,6 +13,7 @@ from retrieval.enhanced_retriever import setup_enhanced_retriever
 from interface.query_interface import graphrag_query_interface
 from llm.llm_factory import get_current_model_info
 import torch
+from visualization.dfg_visualization import visualize_dfg, export_dfg_data
 
 config = Config()
 
@@ -49,8 +50,27 @@ def main():
     try:
         # Load and process data
         df = load_csv_data()
+        
+        # List all available part_descs and let user select one
+        parts = list_part_descs(df)
+        print("Available part_descs:", parts)
+        # For now, use input() for selection (or pick the first for testing)
+        selected_part = input("Enter part_desc to filter (or leave blank for all): ").strip()
+        if selected_part:
+            if selected_part not in parts:
+                print(f"'{selected_part}' not found. Using all parts.")
+            else:
+                df = filter_by_part_desc(df, selected_part)
+                print(f"Filtered to part_desc: {selected_part} ({len(df)} events)")
+        else:
+            print("No filtering applied.")
+
         log = prepare_pm4py_log(df)
         dfg, start_activities, end_activities, performance_dfgs = discover_process_model(log)
+        
+        # Visualize DFG
+        visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
+        export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv")
         
         # Generate chunks
         print("Generating activity-based chunks for RAG...")

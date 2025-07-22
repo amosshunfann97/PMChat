@@ -22,34 +22,36 @@ class EnhancedRetriever:
             except Exception as e:
                 self.use_reranker = False
 
-    def search(self, query: str) -> RetrieverResult:
+    def search(self, query: str, top_k: int = None) -> RetrieverResult:
         """
         Search with optional reranking
-        
+
         Args:
             query: Search query
             top_k: Number of results to return
-            
+
         Returns:
             RetrieverResult with potentially reranked results
         """
         try:
-            # Fetch RETRIEVER_TOP_K candidates from Neo4j
-            base_result = self.base_retriever.search(query, top_k=config.RETRIEVER_TOP_K)
-            
+            # Use provided top_k or fallback to config
+            if top_k is None:
+                top_k = config.RETRIEVER_TOP_K
+            base_result = self.base_retriever.search(query, top_k=top_k)
+
             if not self.use_reranker or not self.reranker or not base_result.items:
                 return base_result
-            
+
             # Prepare chunks for reranking
             chunks = []
             for item in base_result.items:
                 text = self._extract_text_content(item.content)
                 metadata = item.metadata or {}
                 chunks.append((text, metadata))
-            
+
             # Rerank and select RERANKER_TOP_K best
             reranked_results = self.reranker.rerank(query, chunks, top_k=config.RERANKER_TOP_K)
-            
+
             # Convert back to RetrieverResultItem format
             reranked_items = []
             for text, metadata, rerank_score in reranked_results:
@@ -60,7 +62,7 @@ class EnhancedRetriever:
                     metadata=metadata
                 )
                 reranked_items.append(item)
-            
+
             enhanced_result = RetrieverResult(
                 items=reranked_items,
                 metadata={"reranked": True, "original_count": len(base_result.items)}
@@ -68,7 +70,7 @@ class EnhancedRetriever:
             return enhanced_result
         except Exception as e:
             traceback.print_exc()
-            return self.base_retriever.search(query, top_k=config.RERANKER_TOP_K)
+            return self.base_retriever.search(query, top_k=top_k)
     
     def _extract_text_content(self, content) -> str:
         """Extract text content from various content formats"""
