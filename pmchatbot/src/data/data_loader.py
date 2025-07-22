@@ -16,9 +16,15 @@ def load_csv_data():
     
     print(f"Loading data from {csv_file_path}...")
     
-    df = pd.read_csv(csv_file_path, sep=';')
+    # Try reading with semicolon delimiter first, fallback to comma if it fails
+    try:
+        df = pd.read_csv(csv_file_path, sep=';')
+        if df.shape[1] == 1:  # Only one column, likely wrong delimiter
+            raise ValueError("Only one column detected, trying comma delimiter.")
+    except Exception:
+        df = pd.read_csv(csv_file_path, sep=',')
     print(f"Loaded dataset with {len(df)} events")
-    
+
     # Standardize column types
     if 'case_id' in df.columns:
         df['case_id'] = df['case_id'].astype(str)

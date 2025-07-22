@@ -34,7 +34,7 @@ class DirectlyFollowsGraphGenerator:
         self.end_activities = None
         
     def load_data(self, case_col: str = None, activity_col: str = None, 
-                  timestamp_col: str = None, separator: str = ';') -> pd.DataFrame:
+                  timestamp_col: str = None, separator: str = ',') -> pd.DataFrame:
         """
         Load and prepare data from CSV file.
         
@@ -42,7 +42,7 @@ class DirectlyFollowsGraphGenerator:
             case_col (str): Name of the case ID column
             activity_col (str): Name of the activity column  
             timestamp_col (str): Name of the timestamp column
-            separator (str): CSV separator (default: ';')
+            separator (str): CSV separator (default: ',')
             
         Returns:
             pd.DataFrame: Loaded and prepared dataframe

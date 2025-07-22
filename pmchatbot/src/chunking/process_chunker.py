@@ -98,6 +98,10 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
             f"Process '{path_str}' is a process that occurs {frequency} times. "
             f"This process takes on average {perf['mean']:.2f} seconds to complete. (min: {perf['min']:.2f} seconds, max: {perf['max']:.2f} seconds). "
         )
+        # Add this block for loop pattern
+        if len(path) == 2 and path[0] == path[1]:
+            text += "This is a looping pattern, where the activity repeats within a process instance. "
+
         if perf['mean'] == min_time:
             text += "This is the fastest process. "
         if perf['mean'] == max_time:
