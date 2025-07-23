@@ -64,6 +64,21 @@ def extract_case_variants(df, performance_dfgs, min_cases_per_variant=1):
 
     return variant_stats
 
+def format_duration(seconds):
+    days = int(seconds // 86400)
+    hours = int((seconds % 86400) // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    parts = []
+    if days > 0:
+        parts.append(f"{days} days")
+    if hours > 0 or days > 0:
+        parts.append(f"{hours} hrs")
+    if minutes > 0 or hours > 0 or days > 0:
+        parts.append(f"{minutes} mins")
+    parts.append(f"{secs} secs")
+    return " ".join(parts)
+
 def generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats):
     """Generate variant-based chunks for RAG"""
     print("Generating variant-based process model chunks with performance metrics...")
@@ -85,7 +100,8 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         variant_str = " → ".join(variant)
         text = (
             f"Process variant '{variant_str}' represents an execution pattern found in {frequency} cases. "
-            f"This variant consists of {variant_length} activities and takes on average {stats['avg_duration']:.2f} seconds to complete. (min: {stats['min_duration']:.2f} seconds, max: {stats['max_duration']:.2f} seconds). "
+            f"This variant consists of {variant_length} activities and takes on average {format_duration(stats['avg_duration'])} to complete. "
+            f"(min: {format_duration(stats['min_duration'])}, max: {format_duration(stats['max_duration'])}). "
         )
         if stats['avg_duration'] == min_duration:
             text += "This is the fastest variant. "

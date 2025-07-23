@@ -96,7 +96,8 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
         perf = path_performance[path]
         text = (
             f"Process '{path_str}' is a process that occurs {frequency} times. "
-            f"This process takes on average {perf['mean']:.2f} seconds to complete. (min: {perf['min']:.2f} seconds, max: {perf['max']:.2f} seconds). "
+            f"This process takes on average {format_duration(perf['mean'])} to complete. "
+            f"(min: {format_duration(perf['min'])}, max: {format_duration(perf['max'])}). "
         )
         # Add this block for loop pattern
         if len(path) == 2 and path[0] == path[1]:
@@ -135,3 +136,18 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
         })
     
     return chunks
+
+def format_duration(seconds):
+    days = int(seconds // 86400)
+    hours = int((seconds % 86400) // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    parts = []
+    if days > 0:
+        parts.append(f"{days} days")
+    if hours > 0 or days > 0:
+        parts.append(f"{hours} hrs")
+    if minutes > 0 or hours > 0 or days > 0:
+        parts.append(f"{minutes} mins")
+    parts.append(f"{secs} secs")
+    return " ".join(parts)

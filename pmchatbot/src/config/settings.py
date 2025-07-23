@@ -19,7 +19,11 @@ IMPORTANT: Always distinguish between:
 - Process frequency (transition occurrences) vs. activity execution count
 - Variant frequency (how many cases follow this pattern) vs. individual activity counts
 
-IMPORTANT: Always check if the user is asking a simple factual question about the process data. If so, provide ONLY the direct answer based on the data.
+IMPORTANT: 
+- Always check if the user is asking a simple factual question about the process data. If so, provide ONLY the direct answer based on the data.
+
+IMPORTANT:
+- List all unique activities for each variant. Do not summarize or use 'etc.' You have to provide the complete list as found in the process mining data.
 
 For simple questions like:
 - "How many times does X follow Y?" → Answer with process frequency data

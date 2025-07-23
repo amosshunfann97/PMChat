@@ -101,8 +101,8 @@ def _store_activity_chunks(session, activity_chunks, local_embedder):
             print(f"   - Error creating activity chunk {i}: {e}")
 
 def _store_process_chunks(session, process_chunks, frequent_paths, local_embedder):
-    """Store process paths and chunks"""
-    # Create ProcessPath nodes
+    """Store process paths and chunks with performance metrics as properties"""
+    # Create ProcessPath nodes (unchanged)
     for i, (path, frequency) in enumerate(frequent_paths):
         path_str = " → ".join(path)
         session.run("""
@@ -129,11 +129,12 @@ def _store_process_chunks(session, process_chunks, frequent_paths, local_embedde
     
     print(f"   - Created {len(frequent_paths)} ProcessPath nodes")
     
-    # Store process chunks with embeddings
+    # Store process chunks with embeddings and performance metrics
     print("   - Creating process chunk embeddings with local model...")
     for i, chunk in enumerate(process_chunks):
         try:
             embedding = local_embedder.encode([chunk["text"]])[0].tolist()
+            perf = chunk["data"]["performance"]
             session.run("""
                 CREATE (pc:ProcessChunk {
                     id: $id,
@@ -141,7 +142,12 @@ def _store_process_chunks(session, process_chunks, frequent_paths, local_embedde
                     path_string: $path_string,
                     type: $type,
                     source: $source,
-                    embedding: $embedding
+                    embedding: $embedding,
+                    mean_duration: $mean,
+                    min_duration: $min,
+                    max_duration: $max,
+                    frequency: $frequency,
+                    rank: $rank
                 })
             """, 
             id=i, 
@@ -149,7 +155,12 @@ def _store_process_chunks(session, process_chunks, frequent_paths, local_embedde
             path_string=chunk["path_string"],
             type=chunk["type"],
             source=chunk["source"],
-            embedding=embedding)
+            embedding=embedding,
+            mean=perf["mean"],
+            min=perf["min"],
+            max=perf["max"],
+            frequency=chunk["data"]["frequency"],
+            rank=chunk["data"]["rank"])
             
             session.run("""
                 MATCH (pc:ProcessChunk {id: $chunk_id})
@@ -162,8 +173,8 @@ def _store_process_chunks(session, process_chunks, frequent_paths, local_embedde
             print(f"   - Error creating process chunk {i}: {e}")
 
 def _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder):
-    """Store case variants and chunks"""
-    # Create CaseVariant nodes
+    """Store case variants and chunks with performance metrics as properties"""
+    # Create CaseVariant nodes (unchanged)
     for i, stats in enumerate(variant_stats):
         variant = stats['variant']
         variant_str = " → ".join(variant)
@@ -198,11 +209,12 @@ def _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder
     
     print(f"   - Created {len(variant_stats)} CaseVariant nodes")
     
-    # Store variant chunks with embeddings
+    # Store variant chunks with embeddings and performance metrics
     print("   - Creating variant-based chunk embeddings with local model...")
     for i, chunk in enumerate(variant_chunks):
         try:
             embedding = local_embedder.encode([chunk["text"]])[0].tolist()
+            perf = chunk["data"]["performance"]
             session.run("""
                 CREATE (vc:VariantChunk {
                     id: $id,
@@ -210,7 +222,13 @@ def _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder
                     variant_string: $variant_string,
                     type: $type,
                     source: $source,
-                    embedding: $embedding
+                    embedding: $embedding,
+                    avg_duration: $avg_duration,
+                    min_duration: $min_duration,
+                    max_duration: $max_duration,
+                    total_duration: $total_duration,
+                    frequency: $frequency,
+                    rank: $rank
                 })
             """, 
             id=i, 
@@ -218,7 +236,13 @@ def _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder
             variant_string=chunk["variant_string"],
             type=chunk["type"],
             source=chunk["source"],
-            embedding=embedding)
+            embedding=embedding,
+            avg_duration=perf["avg_duration"],
+            min_duration=perf["min_duration"],
+            max_duration=perf["max_duration"],
+            total_duration=perf["total_duration"],
+            frequency=chunk["data"]["frequency"],
+            rank=chunk["data"]["rank"])
             
             session.run("""
                 MATCH (vc:VariantChunk {id: $chunk_id})
