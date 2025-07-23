@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PROCESS_MINING_CONTEXT = """You are a process mining expert. Please read thoroughly the {context_label}. 
+PROCESS_MINING_CONTEXT = """You are a process mining expert. Please read thoroughly the {context_label}. If the user query does not related to process mining, single characters/word and feels like uncomplete. please respond with "I can only answer questions related to process mining.".
 
 TERMINOLOGY DEFINITIONS (CRITICAL FOR ACCURATE RESPONSES):
 - "Execution count": Total number of times an activity was performed across ALL cases/instances
