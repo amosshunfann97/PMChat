@@ -54,16 +54,18 @@ def main():
         # List all available part_descs and let user select one
         parts = list_part_descs(df)
         print("Available part_descs:", parts)
-        # For now, use input() for selection (or pick the first for testing)
-        selected_part = input("Enter part_desc to filter (or leave blank for all): ").strip()
-        if selected_part:
+        # Prompt user until valid input or blank
+        while True:
+            selected_part = input("Enter part_desc to filter (or leave blank for all): ").strip()
+            if not selected_part:
+                print("No filtering applied.")
+                break
             if selected_part not in parts:
-                print(f"'{selected_part}' not found. Using all parts.")
+                print(f"Typo detected: '{selected_part}' not found in available part_descs. Please try again.")
             else:
                 df = filter_by_part_desc(df, selected_part)
                 print(f"Filtered to part_desc: {selected_part} ({len(df)} events)")
-        else:
-            print("No filtering applied.")
+                break
 
         log = prepare_pm4py_log(df)
         dfg, start_activities, end_activities, performance_dfgs = discover_process_model(log)
@@ -80,7 +82,7 @@ def main():
         print(f"   Generated {len(activity_chunks)} activity-based chunks")
         
         print("Extracting frequent process paths with performance for RAG...")
-        frequent_paths, path_performance = extract_process_paths(df, performance_dfgs, min_frequency=1)
+        frequent_paths, path_performance = extract_process_paths(dfg, performance_dfgs, min_frequency=1)
         
         print("Generating process-based chunks with performance for RAG...")
         process_chunks = generate_process_based_chunks(

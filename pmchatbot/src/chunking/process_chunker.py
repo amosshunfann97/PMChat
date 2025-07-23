@@ -1,67 +1,25 @@
 from collections import defaultdict
 
-def extract_process_paths(df, performance_dfgs, min_frequency=1):
-    """Extract 2-activity process paths from the event log with performance metrics"""
+def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
+    """Extract 2-activity process paths from the DFG with performance metrics"""
     print(f"Extracting 2-activity process paths with performance (min frequency: {min_frequency})...")
     
-    # Group by case and get activity sequences with timestamps
-    case_sequences = []
-    case_timestamps = []
-    for case_id, group in df.groupby('case_id'):
-        # Sort by timestamp to get correct order
-        sequence = group.sort_values('timestamp')['activity'].tolist()
-        timestamps = group.sort_values('timestamp')['timestamp'].tolist()
-        case_sequences.append(sequence)
-        case_timestamps.append(timestamps)
-    
-    # Extract only 2-activity paths (direct transitions) with performance
-    path_frequencies = defaultdict(int)
-    path_durations = defaultdict(list)
-    
-    for sequence, timestamps in zip(case_sequences, case_timestamps):
-        # Extract only paths of length 2 (direct activity transitions)
-        for i in range(len(sequence) - 1):
-            path = tuple(sequence[i:i + 2])  # Only 2-activity paths
-            path_frequencies[path] += 1
-            
-            # Calculate duration between activities
-            duration = (timestamps[i + 1] - timestamps[i]).total_seconds()
-            path_durations[path].append(duration)
-    
-    # Filter by minimum frequency and calculate performance statistics
+    # Use DFG directly for frequencies (same as activity chunker)
     frequent_paths = {}
     path_performance = {}
-    for path, freq in path_frequencies.items():
-        if freq >= min_frequency:
-            frequent_paths[path] = freq
-            durations = path_durations[path]
+    
+    for (src, tgt), count in dfg.items():
+        if count >= min_frequency:
+            path = (src, tgt)
+            frequent_paths[path] = count
+            
+            # Get performance metrics from performance_dfgs
             path_performance[path] = {
-                'mean': sum(durations) / len(durations),
-                'min': min(durations),
-                'max': max(durations),
-                'count': len(durations)
+                'mean': performance_dfgs['mean'].get((src, tgt), 0.0),
+                'min': performance_dfgs['min'].get((src, tgt), 0.0),
+                'max': performance_dfgs['max'].get((src, tgt), 0.0),
+                'count': count
             }
-    
-    # Sort by frequency
-    sorted_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
-    
-    print(f"   Found {len(sorted_paths)} frequent 2-activity paths")
-    print("   Top 10 most frequent 2-activity transitions with performance:")
-    for i, (path, freq) in enumerate(sorted_paths[:10], 1):
-        path_str = " → ".join(path)
-        perf = path_performance[path]
-        print(f"   {i}. {path_str} (frequency: {freq}, avg time: {perf['mean']:.2f}s)")
-    
-    # Calculate performance metrics for all paths using PM4Py data
-    path_performance = {}
-    for path, freq in frequent_paths.items():
-        src, tgt = path
-        path_performance[path] = {
-            'mean': performance_dfgs['mean'].get((src, tgt), 0.0),
-            'min': performance_dfgs['min'].get((src, tgt), 0.0),
-            'max': performance_dfgs['max'].get((src, tgt), 0.0),
-            'count': freq
-        }
     
     # Sort paths by frequency
     sorted_frequent_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
@@ -75,8 +33,8 @@ def extract_process_paths(df, performance_dfgs, min_frequency=1):
     
     return sorted_frequent_paths, path_performance
 
-def generate_process_based_chunks(dfg, start_activities, end_activities, frequent_paths, path_performance):
-    """Generate process-based chunks for RAG"""
+def generate_process_based_chunks(frequent_paths, path_performance):
+    """Generate process-based chunks for RAG with self-loop detection"""
     print("Generating process-based process model chunks with performance metrics...")
     chunks = []
     
@@ -91,6 +49,11 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
         max_freq = min_freq = None
         min_time = max_time = None
 
+    # Self-loop detection and ranking
+    self_loops = {path: freq for path, freq in frequent_paths if path[0] == path[1] and freq > 0}
+    self_loops_sorted = sorted(self_loops.items(), key=lambda x: x[1], reverse=True)
+    total_self_loops = len(self_loops_sorted)
+
     for i, (path, frequency) in enumerate(frequent_paths):
         path_str = " → ".join(path)
         perf = path_performance[path]
@@ -99,9 +62,14 @@ def generate_process_based_chunks(dfg, start_activities, end_activities, frequen
             f"This process takes on average {format_duration(perf['mean'])} to complete. "
             f"(min: {format_duration(perf['min'])}, max: {format_duration(perf['max'])}). "
         )
-        # Add this block for loop pattern
+        # Self-loop detection and ranking
         if len(path) == 2 and path[0] == path[1]:
-            text += "This is a looping pattern, where the activity repeats within a process instance. "
+            # Find rank of current self-loop among all self-loops
+            rank = next((idx + 1 for idx, (loop_path, _) in enumerate(self_loops_sorted) if loop_path == path), None)
+            text += (
+                f"It has a self-loop pattern, directly followed by itself {frequency} times "
+                f"(rank {rank}/{total_self_loops} self-loop transitions). "
+            )
 
         if perf['mean'] == min_time:
             text += "This is the fastest process. "
