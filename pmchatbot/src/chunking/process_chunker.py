@@ -106,16 +106,22 @@ def generate_process_based_chunks(frequent_paths, path_performance):
     return chunks
 
 def format_duration(seconds):
-    days = int(seconds // 86400)
+    years = int(seconds // 31536000)  # 365 days
+    months = int((seconds % 31536000) // 2592000)  # 30 days
+    days = int((seconds % 2592000) // 86400)
     hours = int((seconds % 86400) // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
     parts = []
-    if days > 0:
+    if years > 0:
+        parts.append(f"{years} years")
+    if months > 0 or years > 0:
+        parts.append(f"{months} months")
+    if days > 0 or months > 0 or years > 0:
         parts.append(f"{days} days")
-    if hours > 0 or days > 0:
+    if hours > 0 or days > 0 or months > 0 or years > 0:
         parts.append(f"{hours} hrs")
-    if minutes > 0 or hours > 0 or days > 0:
+    if minutes > 0 or hours > 0 or days > 0 or months > 0 or years > 0:
         parts.append(f"{minutes} mins")
     parts.append(f"{secs} secs")
     return " ".join(parts)

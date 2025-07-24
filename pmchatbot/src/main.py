@@ -14,6 +14,7 @@ from interface.query_interface import graphrag_query_interface
 from llm.llm_factory import get_current_model_info
 import torch
 from visualization.dfg_visualization import visualize_dfg, export_dfg_data
+from visualization.performance_dfg_visualization import visualize_performance_dfg
 
 config = Config()
 
@@ -74,6 +75,9 @@ def main():
         visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
         export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv")
         
+        # Visualize Performance DFG
+        visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
+        
         # Generate chunks
         print("Generating activity-based chunks for RAG...")
         activity_chunks = generate_activity_based_chunks(
@@ -86,7 +90,7 @@ def main():
         
         print("Generating process-based chunks with performance for RAG...")
         process_chunks = generate_process_based_chunks(
-            dfg, start_activities, end_activities, frequent_paths, path_performance
+            frequent_paths, path_performance
         )
         print(f"   Generated {len(process_chunks)} process-based chunks")
         
