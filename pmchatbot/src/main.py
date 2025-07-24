@@ -1,10 +1,10 @@
 import openai
 from config.settings import Config
 from data.data_loader import load_csv_data, build_activity_case_map, list_part_descs, filter_by_part_desc
-from data.pm4py_processor import prepare_pm4py_log, discover_process_model
+from data.data_processor import prepare_pm4py_log, discover_process_model, extract_case_variants, extract_process_paths
 from chunking.activity_chunker import generate_activity_based_chunks
-from chunking.process_chunker import extract_process_paths, generate_process_based_chunks
-from chunking.variant_chunker import extract_case_variants, generate_variant_based_chunks
+from chunking.process_chunker import generate_process_based_chunks
+from chunking.variant_chunker import generate_variant_based_chunks
 from embeddings.local_embedder import get_local_embedder
 from database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
 from database.data_storage import store_chunks_in_neo4j

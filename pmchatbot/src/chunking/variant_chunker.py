@@ -1,57 +1,5 @@
 from collections import defaultdict
-import pm4py
-from pm4py.statistics.traces.generic.log import case_statistics
 
-def extract_case_variants(event_log, min_cases_per_variant=1):
-    """
-    Extract case variants and their durations using PM4Py event log.
-    """
-    from pm4py.statistics.variants.log import get as variants_get
-
-    print(f"Extracting case variants with performance (min cases per variant: {min_cases_per_variant})...")
-
-    variants_dict, durations_dict = variants_get.get_variants_along_with_case_durations(event_log)
-
-    # Convert variants_dict keys to tuple for consistency
-    variant_groups = {tuple(variant): [trace.attributes.get("concept:name", str(idx))
-                                       for idx, trace in enumerate(traces)]
-                      for variant, traces in variants_dict.items()}
-
-    frequent_variants = {variant: cases for variant, cases in variant_groups.items()
-                         if len(cases) >= min_cases_per_variant}
-    sorted_variants = sorted(frequent_variants.items(), key=lambda x: len(x[1]), reverse=True)
-
-    print(f"   Found {len(sorted_variants)} case variants")
-    print("   Top 10 most frequent variants with performance:")
-    for i, (variant, cases) in enumerate(sorted_variants[:10], 1):
-        variant_str = " → ".join(variant)
-        avg_duration = durations_dict[variant].mean() if len(durations_dict[variant]) > 0 else 0.0
-        print(f"   {i}. {variant_str} ({len(cases)} cases, avg duration: {avg_duration:.2f}s)")
-
-    case_durations = case_statistics.get_all_case_durations(event_log)
-    print(case_durations)
-
-    variant_stats = []
-    for variant, cases in sorted_variants:
-        durations = durations_dict[variant]
-        avg_duration = durations.mean() if len(durations) > 0 else 0.0
-        min_duration = durations.min() if len(durations) > 0 else 0.0
-        max_duration = durations.max() if len(durations) > 0 else 0.0
-        total_duration = durations.sum() if len(durations) > 0 else 0.0
-        stats = {
-            'variant': variant,
-            'cases': cases,
-            'frequency': len(cases),
-            'avg_activities': len(variant),
-            'avg_unique_activities': len(set(variant)),
-            'avg_duration': avg_duration,
-            'min_duration': min_duration,
-            'max_duration': max_duration,
-            'total_duration': total_duration
-        }
-        variant_stats.append(stats)
-
-    return variant_stats
 
 def format_duration(seconds):
     years = int(seconds // 31536000)  # 365 days
