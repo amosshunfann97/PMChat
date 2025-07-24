@@ -8,7 +8,6 @@ from chunking.variant_chunker import generate_variant_based_chunks
 from embeddings.local_embedder import get_local_embedder
 from database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
 from database.data_storage import store_chunks_in_neo4j
-from retrieval.retriever_setup import setup_retriever
 from retrieval.enhanced_retriever import setup_enhanced_retriever
 from interface.query_interface import graphrag_query_interface
 from llm.llm_factory import get_current_model_info
