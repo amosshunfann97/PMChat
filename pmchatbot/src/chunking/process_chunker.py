@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 def generate_process_based_chunks(frequent_paths, path_performance):
     """Generate process-based chunks for RAG with self-loop detection"""
     print("Generating process-based process model chunks with performance metrics...")

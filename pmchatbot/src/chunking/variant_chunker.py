@@ -1,6 +1,3 @@
-from collections import defaultdict
-
-
 def format_duration(seconds):
     years = int(seconds // 31536000)  # 365 days
     months = int((seconds % 31536000) // 2592000)  # 30 days
