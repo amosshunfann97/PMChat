@@ -10,38 +10,41 @@ from database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
 from database.data_storage import store_chunks_in_neo4j
 from retrieval.enhanced_retriever import setup_enhanced_retriever
 from interface.query_interface import graphrag_query_interface
-from llm.llm_factory import get_current_model_info
+from llm.llm_factory import get_current_model_info, get_embedding_model_name, get_reranker_model_name
 import torch
 from visualization.dfg_visualization import visualize_dfg, export_dfg_data
 from visualization.performance_dfg_visualization import visualize_performance_dfg
+from utils.logging_utils import log  # <-- Add this import
 
 config = Config()
 
-print("DEBUG: main.py USE_RERANKER =", config.USE_RERANKER)
+log(f"DEBUG: main.py USE_RERANKER = {config.USE_RERANKER}", level="debug")
 
 def setup_openai():
     """Setup OpenAI API (only if using OpenAI)"""
     if config.LLM_TYPE.lower() == "openai" and config.OPENAI_API_KEY:
         openai.api_key = config.OPENAI_API_KEY
     elif config.LLM_TYPE.lower() == "openai":
-        print("Warning: OPENAI_API_KEY not found but LLM_TYPE is set to openai")
+        log("Warning: OPENAI_API_KEY not found but LLM_TYPE is set to openai", level="warning")
 
 def display_model_info():
     """Display current model configuration"""
     model_info = get_current_model_info()
-    print(f"LLM Configuration:")
-    print(f"   - Type: {model_info['type'].upper()}")
-    print(f"   - Model: {model_info['model_name']}")
-    print(f"   - Temperature: {model_info['temperature']}")
-    print(f"   - Endpoint: {model_info['base_url']}")
+    log(f"LLM Configuration:", level="info")
+    log(f"   - Type: {model_info['type'].upper()}", level="info")
+    log(f"   - Model: {model_info['model_name']}", level="info")
+    log(f"   - Temperature: {model_info['temperature']}", level="info")
+    log(f"   - Endpoint: {model_info['base_url']}", level="info")
+    log(f"   - Embedding Model: {get_embedding_model_name()}", level="info")
+    log(f"   - Reranker Model: {get_reranker_model_name()}", level="info")
 
 def main():
-    print("Starting Neo4j + PM4py + GraphRAG Test with LOCAL EMBEDDING MODEL")
-    print("=" * 80)
+    log("Starting Neo4j + PM4py + GraphRAG Test with LOCAL EMBEDDING MODEL", level="info")
+    log("=" * 80, level="info")
     
     # Display model configuration
     display_model_info()
-    print("=" * 80)
+    log("=" * 80, level="info")
     
     # Setup
     if config.LLM_TYPE.lower() == "openai":
@@ -53,23 +56,23 @@ def main():
         
         # List all available part_descs and let user select one
         parts = list_part_descs(df)
-        print("Available part_descs:", parts)
+        log(f"Available part_descs: {parts}", level="info")
         # Prompt user until valid input or blank
         while True:
             selected_part = input("Enter part_desc to filter (or leave blank for all): ").strip()
             if not selected_part:
-                print("No filtering applied.")
+                log("No filtering applied.", level="info")
                 break
             if selected_part not in parts:
-                print(f"Typo detected: '{selected_part}' not found in available part_descs. Please try again.")
+                log(f"Typo detected: '{selected_part}' not found in available part_descs. Please try again.", level="warning")
             else:
                 df = filter_by_part_desc(df, selected_part)
-                print(f"Filtered to part_desc: {selected_part} ({len(df)} events)")
+                log(f"Filtered to part_desc: {selected_part} ({len(df)} events)", level="info")
                 break
 
-        log = prepare_pm4py_log(df)
-        dfg, start_activities, end_activities, performance_dfgs = discover_process_model(log)
-        
+        event_log = prepare_pm4py_log(df)
+        dfg, start_activities, end_activities, performance_dfgs = discover_process_model(event_log)
+
         # Visualize DFG
         visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
         export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv")
@@ -78,32 +81,32 @@ def main():
         visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
         
         # Generate chunks
-        print("Generating activity-based chunks for RAG...")
+        log("Generating activity-based chunks for RAG...", level="info")
         activity_chunks = generate_activity_based_chunks(
             dfg, start_activities, end_activities, build_activity_case_map(df)
         )
-        print(f"   Generated {len(activity_chunks)} activity-based chunks")
+        log(f"   Generated {len(activity_chunks)} activity-based chunks", level="info")
         
-        print("Extracting frequent process paths with performance for RAG...")
+        log("Extracting frequent process paths with performance for RAG...", level="info")
         frequent_paths, path_performance = extract_process_paths(dfg, performance_dfgs, min_frequency=1)
         
-        print("Generating process-based chunks with performance for RAG...")
+        log("Generating process-based chunks with performance for RAG...", level="info")
         process_chunks = generate_process_based_chunks(
             frequent_paths, path_performance
         )
-        print(f"   Generated {len(process_chunks)} process-based chunks")
+        log(f"   Generated {len(process_chunks)} process-based chunks", level="info")
         
-        print("Extracting case variants with performance for RAG...")
-        variant_stats = extract_case_variants(log, min_cases_per_variant=1)
+        log("Extracting case variants with performance for RAG...", level="info")
+        variant_stats = extract_case_variants(event_log, min_cases_per_variant=1)
         
-        print("Generating variant-based chunks with performance for RAG...")
+        log("Generating variant-based chunks with performance for RAG...", level="info")
         variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
-        print(f"   Generated {len(variant_chunks)} variant-based chunks")
+        log(f"   Generated {len(variant_chunks)} variant-based chunks", level="info")
         
         # Database operations
         driver = connect_neo4j()
         if not driver:
-            print("Cannot proceed without Neo4j connection.")
+            log("Cannot proceed without Neo4j connection.", level="error")
             return
         
         try:
@@ -111,7 +114,7 @@ def main():
             force_clean_neo4j_indexes(driver)
             
             # 1. Load embedding model on GPU for chunking
-            local_embedder_gpu = get_local_embedder(device="cuda")  # Modify get_local_embedder to accept device
+            local_embedder_gpu = get_local_embedder(device="cuda")
             
             # 2. Use embedding model for chunking and retriever setup
             store_chunks_in_neo4j(
@@ -144,14 +147,14 @@ def main():
                 graphrag_query_interface(retriever_activity, retriever_process, retriever_variant)
                 
             else:
-                print("Failed to setup GraphRAG retrievers. Check your local embedding model and Neo4j indexes.")
+                log("Failed to setup GraphRAG retrievers. Check your local embedding model and Neo4j indexes.", level="error")
         
         finally:
             driver.close()
-            print("\nDisconnected from Neo4j. Goodbye!")
+            log("\nDisconnected from Neo4j. Goodbye!", level="info")
             
     except Exception as e:
-        print(f"Error in main execution: {e}")
+        log(f"Error in main execution: {e}", level="error")
         import traceback
         traceback.print_exc()
 

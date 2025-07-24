@@ -1,7 +1,7 @@
 import neo4j
 import time
 from config.settings import Config
-
+from utils.logging_utils import log
 config = Config()
 
 def connect_neo4j():
@@ -13,15 +13,15 @@ def connect_neo4j():
         )
         with driver.session() as session:
             session.run("RETURN 1")
-        print("Connected to Neo4j successfully!")
+        log("Connected to Neo4j successfully!", level="info")
         return driver
     except Exception as e:
-        print(f"Failed to connect to Neo4j: {e}")
+        log(f"Failed to connect to Neo4j: {e}", level="error")
         return None
 
 def force_clean_neo4j_indexes(driver):
     """Force clean all indexes in Neo4j"""
-    print("Force cleaning all Neo4j indexes...")
+    log("Force cleaning all Neo4j indexes...", level="info")
     with driver.session() as session:
         try:
             # Get all existing indexes
@@ -33,12 +33,12 @@ def force_clean_neo4j_indexes(driver):
                 if index_name and ('chunk' in index_name.lower() or 'vector' in index_name.lower() or 'fulltext' in index_name.lower()):
                     try:
                         session.run(f"DROP INDEX `{index_name}` IF EXISTS")
-                        print(f"   - Force dropped index: {index_name}")
+                        log(f"   - Force dropped index: {index_name}", level="debug")
                     except Exception as e:
-                        print(f"   - Could not drop {index_name}: {e}")
+                        log(f"   - Could not drop {index_name}: {e}", level="warning")
             
             # Wait for cleanup
             time.sleep(5)
-            print("   - All indexes cleaned successfully")
+            log("   - All indexes cleaned successfully", level="info")
         except Exception as e:
-            print(f"   - Error cleaning indexes: {e}")
+            log(f"   - Error cleaning indexes: {e}", level="error")

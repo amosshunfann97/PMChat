@@ -1,6 +1,8 @@
+from utils.logging_utils import log
+
 def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map):
     """Generate activity-based chunks for RAG"""
-    print("Generating activity-based process model chunks...")
+    log("Generating activity-based process model chunks...", level="info")
     chunks = []
     all_activities = set()
     
@@ -32,7 +34,7 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
     self_loops_sorted = sorted(self_loops.items(), key=lambda x: x[1], reverse=True)
     total_self_loops = len(self_loops_sorted)
 
-    for activity in all_activities:
+    for idx, activity in enumerate(all_activities):
         incoming = [(src, count) for (src, tgt), count in dfg.items() if tgt == activity]
         outgoing = [(tgt, count) for (src, tgt), count in dfg.items() if src == activity]
         
@@ -103,5 +105,7 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
             "source": "activity_based_chunking",
             "data": activity_model
         })
+
+        log(f"   - Created activity chunk {idx+1}/{len(all_activities)} for '{activity}'", level="debug")
     
     return chunks

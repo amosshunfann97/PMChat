@@ -2,6 +2,7 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import List, Tuple
+from utils.logging_utils import log
 
 class Reranker:
     """Generic reranker for improving retrieval quality"""
@@ -9,7 +10,7 @@ class Reranker:
     def __init__(self, model_path: str, device: str = "auto"):
         self.model_path = model_path
         self.device = self._get_device(device)
-        print(f"Loading Reranker from: {model_path} on device: {self.device}")
+        log(f"Loading Reranker from: {model_path} on device: {self.device.upper()}", level="info")
         
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
@@ -23,8 +24,9 @@ class Reranker:
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
             ).to(self.device)
             self.model.eval()
-            print(f"Reranker loaded successfully on {self.device}")
+            log(f"Reranker loaded successfully on {self.device.upper()}", level="info")
         except Exception as e:
+            log(f"Error loading reranker model: {e}", level="error")
             raise
     
     def _get_device(self, device: str) -> str:
@@ -50,7 +52,8 @@ class Reranker:
             if top_k:
                 reranked_results = reranked_results[:top_k]
             return reranked_results
-        except Exception:
+        except Exception as e:
+            log(f"Error during reranking: {e}", level="error")
             return [(text, metadata, 0.0) for text, metadata in chunks]
     
     def _score_pairs(self, pairs: List[Tuple[str, str]]) -> List[float]:
@@ -81,7 +84,8 @@ class Reranker:
             if scores.ndim > 1:
                 scores = scores.flatten()
             return scores.tolist()
-        except Exception:
+        except Exception as e:
+            log(f"Error scoring batch in reranker: {e}", level="error")
             return [0.0] * len(pairs)
     
     def __del__(self):

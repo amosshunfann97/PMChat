@@ -103,6 +103,9 @@ class Config:
         
         # Retrieval config
         self.RETRIEVER_TOP_K = int(os.getenv("RETRIEVER_TOP_K", "15"))
+        
+        # Logging config
+        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "info").lower()
     
     @property
     def CURRENT_MODEL_NAME(self):

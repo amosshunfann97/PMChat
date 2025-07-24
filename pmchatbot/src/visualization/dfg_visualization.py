@@ -1,14 +1,15 @@
 import pm4py
 import pandas as pd
+from utils.logging_utils import log
 
 def visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png"):
     """Visualize and save the DFG using PM4Py."""
     try:
         pm4py.view_dfg(dfg, start_activities, end_activities)
         pm4py.save_vis_dfg(dfg, start_activities, end_activities, output_path)
-        print(f"DFG visualization saved to {output_path}")
+        log(f"DFG visualization saved to {output_path}", level="info")
     except Exception as e:
-        print(f"DFG visualization failed: {e}")
+        log(f"DFG visualization failed: {e}", level="error")
 
 def export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv"):
     """Export DFG data to CSV."""
@@ -36,4 +37,4 @@ def export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_rela
         })
     dfg_df = pd.DataFrame(dfg_data)
     dfg_df.to_csv(output_path, index=False)
-    print(f"DFG data exported to {output_path}")
+    log(f"DFG data exported to {output_path}", level="info")

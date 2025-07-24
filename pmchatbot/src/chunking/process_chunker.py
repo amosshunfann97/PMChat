@@ -1,6 +1,8 @@
+from utils.logging_utils import log
+
 def generate_process_based_chunks(frequent_paths, path_performance):
     """Generate process-based chunks for RAG with self-loop detection"""
-    print("Generating process-based process model chunks with performance metrics...")
+    log("Generating process-based process model chunks with performance metrics...", level="info")
     chunks = []
     
     if frequent_paths:
@@ -67,6 +69,8 @@ def generate_process_based_chunks(frequent_paths, path_performance):
             "source": "process_based_chunking",
             "data": process_model
         })
+
+        log(f"   - Created process chunk {i+1}/{len(frequent_paths)} for '{path_str}'", level="debug")
     
     return chunks
 

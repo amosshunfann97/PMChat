@@ -1,3 +1,5 @@
+from utils.logging_utils import log
+
 def format_duration(seconds):
     years = int(seconds // 31536000)  # 365 days
     months = int((seconds % 31536000) // 2592000)  # 30 days
@@ -22,7 +24,7 @@ def format_duration(seconds):
 
 def generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats):
     """Generate variant-based chunks for RAG"""
-    print("Generating variant-based process model chunks with performance metrics...")
+    log("Generating variant-based process model chunks with performance metrics...", level="info")
     chunks = []
     total_variants = len(variant_stats)
     total_cases = sum(stats['frequency'] for stats in variant_stats)
@@ -108,5 +110,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
             "source": "variant_based_chunking",
             "data": variant_model
         })
+
+        log(f"   - Created variant chunk {i+1}/{len(variant_stats)} for '{variant_str}'", level="debug")
     
     return chunks

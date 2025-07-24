@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from config.settings import Config
+from utils.logging_utils import log
 
 config = Config()
 
@@ -14,7 +15,7 @@ def load_csv_data():
     if not os.path.exists(csv_file_path):
         raise FileNotFoundError(f"CSV file not found at {csv_file_path}")
     
-    print(f"Loading data from {csv_file_path}...")
+    log(f"Loading data from {csv_file_path}...", level="info")
     
     # Try reading with semicolon delimiter first, fallback to comma if it fails
     try:
@@ -23,7 +24,7 @@ def load_csv_data():
             raise ValueError("Only one column detected, trying comma delimiter.")
     except Exception:
         df = pd.read_csv(csv_file_path, sep=',')
-    print(f"Loaded dataset with {len(df)} events")
+    log(f"Loaded dataset with {len(df)} events", level="info")
 
     # Standardize column types
     if 'case_id' in df.columns:
@@ -37,8 +38,8 @@ def load_csv_data():
     elif 'time:timestamp' in df.columns:
         df['time:timestamp'] = pd.to_datetime(df['time:timestamp'])
     
-    print(f"Dataset contains {df['case_id'].nunique()} unique cases")
-    print(f"Activities: {df['activity'].unique()}")
+    log(f"Dataset contains {df['case_id'].nunique()} unique cases", level="info")
+    log(f"Activities: {df['activity'].unique()}", level="debug")
     
     return df
 

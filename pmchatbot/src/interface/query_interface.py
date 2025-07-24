@@ -16,9 +16,9 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant):
     model_info = get_current_model_info()
     
     print("\n" + "="*80)
-    print(f"PROCESS MINING EXPERT - GraphRAG Interface (Using {model_info['type'].upper()}: {model_info['model_name']})")
+    print(f"PROCESS MINING CHATBOT (Using {model_info['type'].upper()}: {model_info['model_name']})")
     print("="*80)
-    print("I'm your process mining expert assistant. You can query:")
+    print("I'm your process mining chatbot. You can query:")
     print("1. Activity-based context (individual activities and their relationships)")
     print("2. Process-based context (2-activity sequences and transitions)")
     print("3. Variant-based context (process variants and execution patterns)")

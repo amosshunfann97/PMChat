@@ -1,6 +1,7 @@
 import pm4py
 from pm4py.statistics.traces.generic.log import case_statistics
 from pm4py.statistics.variants.log import get as variants_get
+from utils.logging_utils import log
 
 def prepare_pm4py_log(df):
     """Convert DataFrame to PM4Py event log"""
@@ -10,32 +11,32 @@ def prepare_pm4py_log(df):
         'activity': 'concept:name',
         'timestamp': 'time:timestamp'
     })
-    log = pm4py.convert_to_event_log(log_df)
-    return log
+    event_log = pm4py.convert_to_event_log(log_df)
+    return event_log
 
-def discover_process_model(log):
+def discover_process_model(event_log):
     """Discover process model and performance metrics using PM4Py"""
-    print("Discovering process model...")
-    dfg, start_activities, end_activities = pm4py.discover_dfg(log)
-    
-    print("Discovering performance DFG...")
-    performance_dfg_mean, _, _ = pm4py.discover_performance_dfg(log, perf_aggregation_key="mean")
-    performance_dfg_min, _, _ = pm4py.discover_performance_dfg(log, perf_aggregation_key="min")
-    performance_dfg_max, _, _ = pm4py.discover_performance_dfg(log, perf_aggregation_key="max")
-    
+    log("Discovering DFG...", level="info")
+    dfg, start_activities, end_activities = pm4py.discover_dfg(event_log)
+
+    log("Discovering performance DFG...", level="info")
+    performance_dfg_mean, _, _ = pm4py.discover_performance_dfg(event_log, perf_aggregation_key="mean")
+    performance_dfg_min, _, _ = pm4py.discover_performance_dfg(event_log, perf_aggregation_key="min")
+    performance_dfg_max, _, _ = pm4py.discover_performance_dfg(event_log, perf_aggregation_key="max")
+
     performance_dfgs = {
         'mean': performance_dfg_mean,
         'min': performance_dfg_min,
         'max': performance_dfg_max
     }
     
-    print(f"Process discovered:")
-    print(f"   - DFG edges: {len(dfg)}")
-    print(f"   - Performance DFG edges (mean): {len(performance_dfg_mean)}")
-    print(f"   - Performance DFG edges (min): {len(performance_dfg_min)}")
-    print(f"   - Performance DFG edges (max): {len(performance_dfg_max)}")
-    print(f"   - Start activities: {list(start_activities.keys())}")
-    print(f"   - End activities: {list(end_activities.keys())}")
+    log(f"Process discovered:", level="info")
+    log(f"   - DFG edges: {len(dfg)}", level="info")
+    log(f"   - Performance DFG edges (mean): {len(performance_dfg_mean)}", level="info")
+    log(f"   - Performance DFG edges (min): {len(performance_dfg_min)}", level="info")
+    log(f"   - Performance DFG edges (max): {len(performance_dfg_max)}", level="info")
+    log(f"   - Start activities: {list(start_activities.keys())}", level="debug")
+    log(f"   - End activities: {list(end_activities.keys())}", level="debug")
     
     return dfg, start_activities, end_activities, performance_dfgs
 
@@ -43,8 +44,7 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
     """
     Extract case variants and their durations using PM4Py event log.
     """
-    
-    print(f"Extracting case variants with performance (min cases per variant: {min_cases_per_variant})...")
+    log(f"Extracting case variants with performance...", level="info")
 
     variants_dict, durations_dict = variants_get.get_variants_along_with_case_durations(event_log)
 
@@ -57,15 +57,15 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
                          if len(cases) >= min_cases_per_variant}
     sorted_variants = sorted(frequent_variants.items(), key=lambda x: len(x[1]), reverse=True)
 
-    print(f"   Found {len(sorted_variants)} case variants")
-    print("   Top 10 most frequent variants with performance:")
-    for i, (variant, cases) in enumerate(sorted_variants[:10], 1):
+    log(f"   Found {len(sorted_variants)} case variants", level="info")
+    log("   Top 3 most frequent variants with performance:", level="debug")
+    for i, (variant, cases) in enumerate(sorted_variants[:3], 1):
         variant_str = " → ".join(variant)
         avg_duration = durations_dict[variant].mean() if len(durations_dict[variant]) > 0 else 0.0
-        print(f"   {i}. {variant_str} ({len(cases)} cases, avg duration: {avg_duration:.2f}s)")
+        log(f"   {i}. {variant_str} ({len(cases)} cases, avg duration: {avg_duration:.2f}s)", level="debug")
 
     case_durations = case_statistics.get_all_case_durations(event_log)
-    print(case_durations)
+    log(str(case_durations), level="debug")
 
     variant_stats = []
     for variant, cases in sorted_variants:
@@ -91,7 +91,7 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
 
 def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     """Extract 2-activity process paths from the DFG with performance metrics"""
-    print(f"Extracting 2-activity process paths with performance (min frequency: {min_frequency})...")
+    log(f"Extracting 2-activity process paths...", level="info")
 
     frequent_paths = {}
     path_performance = {}
@@ -112,11 +112,11 @@ def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     # Sort paths by frequency
     sorted_frequent_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
 
-    print(f"   Found {len(sorted_frequent_paths)} frequent 2-activity paths with performance metrics")
-    print("   Top 10 most frequent 2-activity transitions with performance metrics:")
-    for i, (path, freq) in enumerate(sorted_frequent_paths[:10], 1):
+    log(f"   Found {len(sorted_frequent_paths)} frequent 2-activity paths with performance metrics", level="info")
+    log("   Top 3 most frequent 2-activity transitions with performance metrics:", level="debug")
+    for i, (path, freq) in enumerate(sorted_frequent_paths[:3], 1):
         path_str = " → ".join(path)
         perf = path_performance[path]
-        print(f"   {i}. {path_str} (frequency: {freq}, avg time: {perf['mean']:.2f}s, min time: {perf['min']:.2f}s, max time: {perf['max']:.2f}s)")
+        log(f"   {i}. {path_str} (frequency: {freq}, avg time: {perf['mean']:.2f}s, min time: {perf['min']:.2f}s, max time: {perf['max']:.2f}s)", level="debug")
 
     return sorted_frequent_paths, path_performance

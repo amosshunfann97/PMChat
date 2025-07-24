@@ -1,4 +1,5 @@
 import pm4py
+from utils.logging_utils import log
 
 def format_duration(seconds):
     days = int(seconds // 86400)
@@ -25,6 +26,6 @@ def visualize_performance_dfg(performance_dfg, start_activities, end_activities,
         # Pass the original numeric values, not formatted strings
         pm4py.view_performance_dfg(performance_dfg, start_activities, end_activities)
         pm4py.save_vis_performance_dfg(performance_dfg, start_activities, end_activities, output_path)
-        print(f"Performance DFG visualization saved to {output_path}")
+        log(f"Performance DFG visualization saved to {output_path}", level="info")
     except Exception as e:
-        print(f"Performance DFG visualization failed: {e}")
+        log(f"Performance DFG visualization failed: {e}", level="error")
