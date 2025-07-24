@@ -4,7 +4,7 @@ def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     """Extract 2-activity process paths from the DFG with performance metrics"""
     print(f"Extracting 2-activity process paths with performance (min frequency: {min_frequency})...")
     
-    # Use DFG directly for frequencies (same as activity chunker)
+    # Use DFG directly for frequencies
     frequent_paths = {}
     path_performance = {}
     
@@ -72,9 +72,9 @@ def generate_process_based_chunks(frequent_paths, path_performance):
             )
 
         if perf['mean'] == min_time:
-            text += "This is the fastest process. "
+            text += "This is the fastest/shortest/quickest process in terms of execution time. "
         if perf['mean'] == max_time:
-            text += "This is the slowest process. "
+            text += "This is the slowest/longest process in terms of execution time. "
             text += "This process is the bottleneck due to its long average execution time. "
             
         total_paths = len(frequent_paths)
@@ -123,5 +123,6 @@ def format_duration(seconds):
         parts.append(f"{hours} hrs")
     if minutes > 0 or hours > 0 or days > 0 or months > 0 or years > 0:
         parts.append(f"{minutes} mins")
-    parts.append(f"{secs} secs")
+    if secs > 0 or not parts:
+        parts.append(f"{secs} secs")
     return " ".join(parts)

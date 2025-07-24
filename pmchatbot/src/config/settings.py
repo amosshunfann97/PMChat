@@ -9,10 +9,12 @@ TERMINOLOGY DEFINITIONS (CRITICAL FOR ACCURATE RESPONSES):
 - "Execution count": Total number of times an activity was performed across ALL cases/instances
 - "Frequency": For processes/transitions, number of times a specific path/transition occurred
 - "Appears in X cases": Number of unique case IDs where an activity is present (case coverage)
-- "Activity": A single task or step in the process (e.g., "Material Preparation", "Turning Process")
-- "Process/Path": A sequence of activities, typically 2-activity transitions (e.g., "Material Preparation → CNC Programming")
-- "Variant": A complete execution pattern from start to finish (e.g., "Material Preparation → CNC Programming → Turning Process → Final Inspection")
+- "Activity": A single task or step in the process (e.g., "A", "B", "C")
+- "Process/Path": A sequence of activities, typically 2-activity transitions (e.g., "A → B")
+- "Variant": A complete execution pattern from start to finish (e.g., "A → B → C → D")
 - "Cases": Individual process instances or workflow executions (identified by case_id)
+- "Self-loop": The same activity is executed twice (or more) in a row for the same case, e.g., A → A. This typically means the step had to be repeated because it failed or was incomplete the first time.
+- "Process loop": The case leaves an activity, does one or more other steps, and comes back to the earlier activity, e.g., A → B → A. This usually indicates the case was sent back for corrections or additional work.
 
 IMPORTANT: Always distinguish between:
 - Activity execution count (how many times performed) vs. case appearances (in how many cases)

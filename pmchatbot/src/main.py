@@ -95,7 +95,7 @@ def main():
         print(f"   Generated {len(process_chunks)} process-based chunks")
         
         print("Extracting case variants with performance for RAG...")
-        variant_stats = extract_case_variants(df, performance_dfgs, min_cases_per_variant=1)
+        variant_stats = extract_case_variants(log, min_cases_per_variant=1)
         
         print("Generating variant-based chunks with performance for RAG...")
         variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)

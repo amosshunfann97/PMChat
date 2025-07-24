@@ -32,7 +32,8 @@ def load_csv_data():
         df['case:concept:name'] = df['case:concept:name'].astype(str)
     
     if 'timestamp' in df.columns:
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], format='%d-%m-%y %H:%M')
+        df = df.sort_values(['case_id', 'timestamp'])
     elif 'time:timestamp' in df.columns:
         df['time:timestamp'] = pd.to_datetime(df['time:timestamp'])
     
