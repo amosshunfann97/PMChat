@@ -2,7 +2,6 @@ from utils.logging_utils import log
 
 def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map):
     """Generate activity-based chunks for RAG"""
-    log("Generating activity-based process model chunks...", level="info")
     chunks = []
     all_activities = set()
     

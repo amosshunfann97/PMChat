@@ -1,0 +1,56 @@
+[project]
+name = "pmchatbot"
+version = "0.1.0"
+description = "A Chainlit-based chatbot for process mining and CSV analysis"
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "chainlit==2.6.0",
+    "pandas==2.3.0",
+    "pm4py==2.7.16",
+    "neo4j==5.28.1",
+    "python-dotenv==1.1.1",
+    "openai==1.93.0",
+    "torch==2.7.1",
+    "sentence-transformers==5.0.0",
+    "matplotlib==3.10.3",
+    "networkx==3.5",
+    "fastapi==0.115.14",
+    "uvicorn==0.35.0",
+    "pydantic==2.11.7",
+    "pillow==11.3.0",
+    "pyyaml==6.0.2",
+    "lxml==6.0.0",
+    "python-multipart==0.0.18",
+    "tqdm==4.67.1",
+    "scikit-learn==1.7.0",
+    "scipy==1.16.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8"
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py37']
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-

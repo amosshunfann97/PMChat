@@ -44,7 +44,6 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
     """
     Extract case variants and their durations using PM4Py event log.
     """
-    log(f"Extracting case variants with performance...", level="info")
 
     variants_dict, durations_dict = variants_get.get_variants_along_with_case_durations(event_log)
 
@@ -58,7 +57,7 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
     sorted_variants = sorted(frequent_variants.items(), key=lambda x: len(x[1]), reverse=True)
 
     log(f"   Found {len(sorted_variants)} case variants", level="info")
-    log("   Top 3 most frequent variants with performance:", level="debug")
+    log("   Top 3 most frequent variants:", level="debug")
     for i, (variant, cases) in enumerate(sorted_variants[:3], 1):
         variant_str = " → ".join(variant)
         avg_duration = durations_dict[variant].mean() if len(durations_dict[variant]) > 0 else 0.0
@@ -91,8 +90,7 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
 
 def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     """Extract 2-activity process paths from the DFG with performance metrics"""
-    log(f"Extracting 2-activity process paths...", level="info")
-
+    
     frequent_paths = {}
     path_performance = {}
 
@@ -112,8 +110,8 @@ def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     # Sort paths by frequency
     sorted_frequent_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
 
-    log(f"   Found {len(sorted_frequent_paths)} frequent 2-activity paths with performance metrics", level="info")
-    log("   Top 3 most frequent 2-activity transitions with performance metrics:", level="debug")
+    log(f"   Found {len(sorted_frequent_paths)} process paths", level="info")
+    log("   Top 3 most frequent 2-activity transitions:", level="debug")
     for i, (path, freq) in enumerate(sorted_frequent_paths[:3], 1):
         path_str = " → ".join(path)
         perf = path_performance[path]

@@ -2,7 +2,6 @@ from utils.logging_utils import log
 
 def generate_process_based_chunks(frequent_paths, path_performance):
     """Generate process-based chunks for RAG with self-loop detection"""
-    log("Generating process-based process model chunks with performance metrics...", level="info")
     chunks = []
     
     if frequent_paths:

@@ -81,25 +81,25 @@ def main():
         visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
         
         # Generate chunks
-        log("Generating activity-based chunks for RAG...", level="info")
+        log("Generating activity-based chunks...", level="info")
         activity_chunks = generate_activity_based_chunks(
             dfg, start_activities, end_activities, build_activity_case_map(df)
         )
         log(f"   Generated {len(activity_chunks)} activity-based chunks", level="info")
         
-        log("Extracting frequent process paths with performance for RAG...", level="info")
+        log("Extracting process paths...", level="info")
         frequent_paths, path_performance = extract_process_paths(dfg, performance_dfgs, min_frequency=1)
         
-        log("Generating process-based chunks with performance for RAG...", level="info")
+        log("Generating process-based chunks...", level="info")
         process_chunks = generate_process_based_chunks(
             frequent_paths, path_performance
         )
         log(f"   Generated {len(process_chunks)} process-based chunks", level="info")
         
-        log("Extracting case variants with performance for RAG...", level="info")
+        log("Extracting case variants...", level="info")
         variant_stats = extract_case_variants(event_log, min_cases_per_variant=1)
         
-        log("Generating variant-based chunks with performance for RAG...", level="info")
+        log("Generating variant-based chunks...", level="info")
         variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
         log(f"   Generated {len(variant_chunks)} variant-based chunks", level="info")
         

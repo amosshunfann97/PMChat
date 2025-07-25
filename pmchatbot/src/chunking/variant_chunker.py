@@ -24,7 +24,6 @@ def format_duration(seconds):
 
 def generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats):
     """Generate variant-based chunks for RAG"""
-    log("Generating variant-based process model chunks with performance metrics...", level="info")
     chunks = []
     total_variants = len(variant_stats)
     total_cases = sum(stats['frequency'] for stats in variant_stats)

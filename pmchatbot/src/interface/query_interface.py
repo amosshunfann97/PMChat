@@ -20,7 +20,7 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant):
     print("="*80)
     print("I'm your process mining chatbot. You can query:")
     print("1. Activity-based context (individual activities and their relationships)")
-    print("2. Process-based context (2-activity sequences and transitions)")
+    print("2. Process-based context (activity sequences and transitions)")
     print("3. Variant-based context (process variants and execution patterns)")
     print("4. All combined (merged results)")
     print("\nType 'quit' to exit, 'help' for more examples")
