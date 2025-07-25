@@ -6,7 +6,7 @@ def visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.
     """Visualize and save the DFG using PM4Py."""
     try:
         pm4py.view_dfg(dfg, start_activities, end_activities)
-        pm4py.save_vis_dfg(dfg, start_activities, end_activities, output_path)
+        # pm4py.save_vis_dfg(dfg, start_activities, end_activities, output_path)
         log(f"DFG visualization saved to {output_path}", level="info")
     except Exception as e:
         log(f"DFG visualization failed: {e}", level="error")

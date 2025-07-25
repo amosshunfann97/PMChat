@@ -23,7 +23,7 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant):
     print("2. Process-based context (activity sequences and transitions)")
     print("3. Variant-based context (process variants and execution patterns)")
     print("4. All combined (merged results)")
-    print("\nType 'quit' to exit, 'help' for more examples")
+    print("\nType 'quit' to exit, 'help' for more examples, or 'back' to select a new part")
     print("-" * 80)
     
     while True:
@@ -31,20 +31,24 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant):
         
         if mode.lower() in ['quit', 'exit', 'q']:
             print("\nThanks for using Process Mining Expert! Keep optimizing those processes!")
-            break
-            
+            return False  # Exit the main loop
+
+        if mode.lower() in ['back', 'restart']:
+            print("\nReturning to part selection...")
+            return True  # Signal to go back to part selection
+
         if mode.lower() in ['help', 'examples', '?']:
             show_help()
             continue
-            
+
         if mode not in ['1', '2', '3', '4']:
             print("Please enter 1, 2, 3, or 4")
             continue
-            
+
         question = input("\nProcess Mining Question: ").strip()
         if not question:
             continue
-            
+
         try:
             if mode == "1":
                 _handle_single_context_query(rag_activity, "ACTIVITY-BASED", question)
@@ -54,7 +58,6 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant):
                 _handle_single_context_query(rag_variant, "VARIANT-BASED", question)
             else:
                 _handle_combined_context_query(rag_activity, rag_process, rag_variant, question)
-                
         except Exception as e:
             print(f"\nAnalysis Error: {e}")
             print("Try rephrasing your question or type 'help' for examples")
