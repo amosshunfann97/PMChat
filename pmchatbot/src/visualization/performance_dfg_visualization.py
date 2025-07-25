@@ -24,7 +24,7 @@ def visualize_performance_dfg(performance_dfg, start_activities, end_activities,
     """Visualize and save the performance DFG as PNG using PM4Py."""
     try:
         # Pass the original numeric values, not formatted strings
-        pm4py.view_performance_dfg(performance_dfg, start_activities, end_activities)
+        pm4py.view_performance_dfg(performance_dfg, start_activities, end_activities, rankdir="TB")
         # pm4py.save_vis_performance_dfg(performance_dfg, start_activities, end_activities, output_path)
         log(f"Performance DFG visualization saved to {output_path}", level="info")
     except Exception as e:
