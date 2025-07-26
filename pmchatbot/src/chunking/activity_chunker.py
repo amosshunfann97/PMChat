@@ -72,8 +72,8 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
             
         case_ids = activity_case_map.get(activity, [])
         text += f"This activity appears in {len(case_ids)} cases. "
-        # if case_ids:
-        #     text += f"Case IDs linked to this activity: {', '.join(case_ids)}. "
+        if case_ids:
+            text += f"Case IDs linked to this activity: {', '.join(case_ids)}. "
         
         # Self-loop detection
         self_loop_count = dfg.get((activity, activity), 0)

@@ -11,12 +11,12 @@ def show_help():
         print(f"   {i}. '{question}'")
     print("\n" + "=" * 50)
 
-def graphrag_query_interface(rag_activity, rag_process, rag_variant):
+def graphrag_query_interface(rag_activity, rag_process, rag_variant, selected_part=None):
     """Interactive query interface for GraphRAG"""
     model_info = get_current_model_info()
     
     print("\n" + "="*80)
-    print(f"PROCESS MINING CHATBOT (Using {model_info['type'].upper()}: {model_info['model_name']})")
+    print(f"PROCESS MINING CHATBOT (Using {model_info['type'].upper()}: {model_info['model_name']}) (Part: {selected_part})")
     print("="*80)
     print("I'm your process mining chatbot. You can query:")
     print("1. Activity-based context (individual activities and their relationships)")

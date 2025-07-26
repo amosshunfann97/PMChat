@@ -120,7 +120,7 @@ def main():
 
             if retriever_activity and retriever_process and retriever_variant:
                 # --- QUERY INTERFACE ---
-                go_back = graphrag_query_interface(retriever_activity, retriever_process, retriever_variant)
+                go_back = graphrag_query_interface(retriever_activity, retriever_process, retriever_variant, selected_part=selected_part if selected_part else "All")
                 if go_back:
                     log("Returning to part selection...", level="info")
                     continue  # Restart the loop for new part selection
