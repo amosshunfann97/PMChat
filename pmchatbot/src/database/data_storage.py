@@ -8,7 +8,7 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
     with driver.session() as session:
         # Clear existing data
         session.run("MATCH (n) DETACH DELETE n")
-        log("   - Cleared existing data", level="info")
+        log("   - Cleared existing data", level="debug")
         
         # Drop existing indexes
         try:
@@ -20,7 +20,7 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
             session.run("DROP INDEX case_chunk_fulltext_index IF EXISTS")
             session.run("DROP INDEX variant_chunk_vector_index IF EXISTS")
             session.run("DROP INDEX variant_chunk_fulltext_index IF EXISTS")
-            log("   - Dropped existing indexes", level="info")
+            log("   - Dropped existing indexes", level="debug")
         except Exception as e:
             log(f"   - Note: {e}", level="warning")
         
@@ -36,6 +36,15 @@ def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activit
         # Store case variants and chunks
         _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder)
         
+        # Summary info log
+        log(
+            f"Stored chunks summary: "
+            f"{len(activity_chunks)} activity chunks, "
+            f"{len(process_chunks)} process chunks, "
+            f"{len(variant_chunks)} variant chunks.",
+            level="info"
+        )
+        
         # Create indexes
         _create_indexes(session)
 
@@ -50,7 +59,7 @@ def _store_dfg_data(session, dfg, start_activities, end_activities):
         ON CREATE SET f.count = r.count
         ON MATCH SET f.count = r.count
     """, rows=dfg_data)
-    log(f"   - Created {len(dfg_data)} process paths", level="info")
+    log(f"   - Created {len(dfg_data)} process paths", level="debug")
     
     if start_activities:
         session.run("""
@@ -58,7 +67,7 @@ def _store_dfg_data(session, dfg, start_activities, end_activities):
             MATCH (a:Activity {name: start.activity})
             SET a.is_start = true, a.start_count = start.count
         """, starts=[{"activity": act, "count": count} for act, count in start_activities.items()])
-        log(f"   - Marked {len(start_activities)} start activities", level="info")
+        log(f"   - Marked {len(start_activities)} start activities", level="debug")
     
     if end_activities:
         session.run("""
@@ -66,11 +75,11 @@ def _store_dfg_data(session, dfg, start_activities, end_activities):
             MATCH (a:Activity {name: end.activity})
             SET a.is_end = true, a.end_count = end.count
         """, ends=[{"activity": act, "count": count} for act, count in end_activities.items()])
-        log(f"   - Marked {len(end_activities)} end activities", level="info")
+        log(f"   - Marked {len(end_activities)} end activities", level="debug")
 
 def _store_activity_chunks(session, activity_chunks, local_embedder):
     """Store activity chunks with embeddings"""
-    log("   - Creating activity chunk embeddings with local model...", level="info")
+    log("   - Creating activity chunk embeddings with local model...", level="debug")
     for i, chunk in enumerate(activity_chunks):
         try:
             embedding = local_embedder.encode([chunk["text"]])[0].tolist()
@@ -128,10 +137,10 @@ def _store_process_chunks(session, process_chunks, frequent_paths, local_embedde
                 MERGE (pp)-[:CONTAINS {position: $position}]->(a)
             """, path_id=i, activity=activity, position=j)
     
-    log(f"   - Created {len(frequent_paths)} ProcessPath nodes", level="info")
+    log(f"   - Created {len(frequent_paths)} ProcessPath nodes", level="debug")
     
     # Store process chunks with embeddings and performance metrics
-    log("   - Creating process chunk embeddings with local model...", level="info")
+    log("   - Creating process chunk embeddings with local model...", level="debug")
     for i, chunk in enumerate(process_chunks):
         try:
             embedding = local_embedder.encode([chunk["text"]])[0].tolist()
@@ -208,10 +217,10 @@ def _store_variant_chunks(session, variant_chunks, variant_stats, local_embedder
                 MERGE (c)-[:FOLLOWS]->(cv)
             """, variant_id=i, case_id=case_id)
     
-    log(f"   - Created {len(variant_stats)} CaseVariant nodes", level="info")
+    log(f"   - Created {len(variant_stats)} CaseVariant nodes", level="debug")
     
     # Store variant chunks with embeddings and performance metrics
-    log("   - Creating variant-based chunk embeddings with local model...", level="info")
+    log("   - Creating variant-based chunk embeddings with local model...", level="debug")
     for i, chunk in enumerate(variant_chunks):
         try:
             embedding = local_embedder.encode([chunk["text"]])[0].tolist()
@@ -273,7 +282,7 @@ def _create_indexes(session):
             CREATE FULLTEXT INDEX variant_chunk_fulltext_index IF NOT EXISTS
             FOR (vc:VariantChunk) ON EACH [vc.text, vc.variant_string]
         """)
-        log("   - Created fulltext indexes", level="info")
+        log("   - Created fulltext indexes", level="debug")
     except Exception as e:
         log(f"   - Warning: Fulltext index creation: {e}", level="warning")
     
@@ -321,7 +330,7 @@ def _create_indexes(session):
                     }
                 }
             """)
-        log("   - Created vector indexes", level="info")
+        log("   - Created vector indexes", level="debug")
     except Exception as e:
         log(f"   - Critical error in vector index creation: {e}", level="error")
         traceback.print_exc()

@@ -21,7 +21,7 @@ def connect_neo4j():
 
 def force_clean_neo4j_indexes(driver):
     """Force clean all indexes in Neo4j"""
-    log("Force cleaning all Neo4j indexes...", level="info")
+    log("Force cleaning all Neo4j indexes...", level="debug")
     with driver.session() as session:
         try:
             # Get all existing indexes
@@ -39,6 +39,6 @@ def force_clean_neo4j_indexes(driver):
             
             # Wait for cleanup
             time.sleep(5)
-            log("   - All indexes cleaned successfully", level="info")
+            log("   - All indexes cleaned successfully", level="debug")
         except Exception as e:
             log(f"   - Error cleaning indexes: {e}", level="error")

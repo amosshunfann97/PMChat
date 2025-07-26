@@ -34,7 +34,6 @@ def graphrag_query_interface(rag_activity, rag_process, rag_variant, selected_pa
             return False  # Exit the main loop
 
         if mode.lower() in ['back', 'restart']:
-            print("\nReturning to part selection...")
             return True  # Signal to go back to part selection
 
         if mode.lower() in ['help', 'examples', '?']:

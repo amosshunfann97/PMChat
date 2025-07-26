@@ -14,7 +14,7 @@ from llm.llm_factory import get_current_model_info, get_embedding_model_name, ge
 import torch
 from visualization.dfg_visualization import visualize_dfg, export_dfg_data
 from visualization.performance_dfg_visualization import visualize_performance_dfg
-from utils.logging_utils import log  # <-- Add this import
+from utils.logging_utils import log
 
 config = Config()
 
@@ -39,7 +39,7 @@ def display_model_info():
     log(f"   - Reranker Model: {get_reranker_model_name()}", level="info")
 
 def main():
-    log("Starting Neo4j + PM4py + GraphRAG Test with LOCAL EMBEDDING MODEL", level="info")
+    log("Starting Neo4j + PM4py + GraphRAG locally...", level="info")
     log("=" * 80, level="info")
     display_model_info()
     log("=" * 80, level="info")
@@ -59,7 +59,7 @@ def main():
             parts = list_part_descs(df)
             log(f"Available parts: {parts}", level="info")
             while True:
-                selected_part = input("Enter part_desc to filter (or leave blank for all): ").strip()
+                selected_part = input("Enter part's name for process discovery (or leave blank for all): ").strip()
                 if not selected_part:
                     log("No filtering applied.", level="info")
                     break
@@ -76,27 +76,27 @@ def main():
             export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv")
             visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
 
-            log("Generating activity-based chunks...", level="info")
+            log("Generating activity-based chunks...", level="debug")
             activity_chunks = generate_activity_based_chunks(
                 dfg, start_activities, end_activities, build_activity_case_map(df)
             )
-            log(f"   Generated {len(activity_chunks)} activity-based chunks", level="info")
+            log(f"   Generated {len(activity_chunks)} activity-based chunks", level="debug")
 
-            log("Extracting process paths...", level="info")
+            log("Extracting process paths...", level="debug")
             frequent_paths, path_performance = extract_process_paths(dfg, performance_dfgs, min_frequency=1)
 
-            log("Generating process-based chunks...", level="info")
+            log("Generating process-based chunks...", level="debug")
             process_chunks = generate_process_based_chunks(
                 frequent_paths, path_performance
             )
-            log(f"   Generated {len(process_chunks)} process-based chunks", level="info")
+            log(f"   Generated {len(process_chunks)} process-based chunks", level="debug")
 
-            log("Extracting case variants...", level="info")
+            log("Extracting case variants...", level="debug")
             variant_stats = extract_case_variants(event_log, min_cases_per_variant=1)
 
-            log("Generating variant-based chunks...", level="info")
+            log("Generating variant-based chunks...", level="debug")
             variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
-            log(f"   Generated {len(variant_chunks)} variant-based chunks", level="info")
+            log(f"   Generated {len(variant_chunks)} variant-based chunks", level="debug")
 
             # --- STORE CHUNKS ---
             force_clean_neo4j_indexes(driver)

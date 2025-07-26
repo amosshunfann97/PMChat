@@ -10,7 +10,7 @@ class Reranker:
     def __init__(self, model_path: str, device: str = "auto"):
         self.model_path = model_path
         self.device = self._get_device(device)
-        log(f"Loading Reranker from: {model_path} on device: {self.device.upper()}", level="info")
+        log(f"Loading Reranker from: {model_path} on device: {self.device.upper()}", level="debug")
         
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
@@ -24,7 +24,7 @@ class Reranker:
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
             ).to(self.device)
             self.model.eval()
-            log(f"Reranker loaded successfully on {self.device.upper()}", level="info")
+            log(f"Reranker loaded successfully on {self.device.upper()}", level="debug")
         except Exception as e:
             log(f"Error loading reranker model: {e}", level="error")
             raise

@@ -30,11 +30,11 @@ def discover_process_model(event_log):
         'max': performance_dfg_max
     }
     
-    log(f"Process discovered:", level="info")
-    log(f"   - DFG edges: {len(dfg)}", level="info")
-    log(f"   - Performance DFG edges (mean): {len(performance_dfg_mean)}", level="info")
-    log(f"   - Performance DFG edges (min): {len(performance_dfg_min)}", level="info")
-    log(f"   - Performance DFG edges (max): {len(performance_dfg_max)}", level="info")
+    log(f"Process discovered:", level="debug")
+    log(f"   - DFG edges: {len(dfg)}", level="debug")
+    log(f"   - Performance DFG edges (mean): {len(performance_dfg_mean)}", level="debug")
+    log(f"   - Performance DFG edges (min): {len(performance_dfg_min)}", level="debug")
+    log(f"   - Performance DFG edges (max): {len(performance_dfg_max)}", level="debug")
     log(f"   - Start activities: {list(start_activities.keys())}", level="debug")
     log(f"   - End activities: {list(end_activities.keys())}", level="debug")
     
@@ -56,7 +56,7 @@ def extract_case_variants(event_log, min_cases_per_variant=1):
                          if len(cases) >= min_cases_per_variant}
     sorted_variants = sorted(frequent_variants.items(), key=lambda x: len(x[1]), reverse=True)
 
-    log(f"   Found {len(sorted_variants)} case variants", level="info")
+    log(f"   Found {len(sorted_variants)} case variants", level="debug")
     log("   Top 3 most frequent variants:", level="debug")
     for i, (variant, cases) in enumerate(sorted_variants[:3], 1):
         variant_str = " → ".join(variant)
@@ -110,7 +110,7 @@ def extract_process_paths(dfg, performance_dfgs, min_frequency=1):
     # Sort paths by frequency
     sorted_frequent_paths = sorted(frequent_paths.items(), key=lambda x: x[1], reverse=True)
 
-    log(f"   Found {len(sorted_frequent_paths)} process paths", level="info")
+    log(f"   Found {len(sorted_frequent_paths)} process paths", level="debug")
     log("   Top 3 most frequent 2-activity transitions:", level="debug")
     for i, (path, freq) in enumerate(sorted_frequent_paths[:3], 1):
         path_str = " → ".join(path)
