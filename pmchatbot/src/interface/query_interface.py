@@ -74,6 +74,7 @@ def _handle_single_context_query(rag, context_label, question):
         
         print(f"Chunk {i}: {content}")
         print(f"   Metadata: {metadata}")
+        print() 
     
     # Get enhanced answer
     result = rag.search(question)
@@ -105,6 +106,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
         content = _extract_content(item.content)
         print(f"Activity Chunk {i}: {content}")
         print(f"   Metadata: {item.metadata}")
+        print()
     
     print("\nRETRIEVED CHUNKS (Process-Based):")
     print("-" * 50)
@@ -113,6 +115,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
         content = _extract_content(item.content)
         print(f"Process Chunk {i}: {content}")
         print(f"   Metadata: {item.metadata}")
+        print()  # Add blank line between chunks
     
     print("\nRETRIEVED CHUNKS (Variant-Based):")
     print("-" * 50)
@@ -121,6 +124,7 @@ def _handle_combined_context_query(rag_activity, rag_process, rag_variant, quest
         content = _extract_content(item.content)
         print(f"Variant Chunk {i}: {content}")
         print(f"   Metadata: {item.metadata}")
+        print()  # Add blank line between chunks
     
     # Get answers from all contexts
     answer_a = "\n".join(_extract_content(item.content) for item in rag_activity.search(question).items)
