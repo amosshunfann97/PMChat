@@ -63,7 +63,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         text += f"This variant represents {percentage:.1f}% among all variants. "
 
         example_cases = cases
-        text += f"Cases following this variant: {', '.join(example_cases)}. "
+        text += f"Case IDs following this variant: {', '.join(example_cases)}. "
         
         if rank == 1:
             text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "

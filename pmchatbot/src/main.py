@@ -67,7 +67,7 @@ def main():
                     log(f"Typo detected: '{selected_part}' not found in available parts. Please try again.", level="warning")
                 else:
                     df = filter_by_part_desc(df, selected_part)
-                    log(f"Filtered to part_desc: {selected_part} ({len(df)} events)", level="info")
+                    log(f"Filtered to selection: {selected_part} ({len(df)} events)", level="info")
                     break
 
             event_log = prepare_pm4py_log(df)
