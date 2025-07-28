@@ -117,7 +117,7 @@ def main():
     print("\n=== Individual Case Durations ===")
     # Sort by duration (descending)
     case_durations = []
-    for trace in event_log[:5]:  # First 5 cases
+    for trace in event_log:
         case_id = trace.attributes['concept:name']
         duration = get_case_duration(event_log, case_id)
         case_durations.append((case_id, duration))
@@ -142,6 +142,7 @@ def main():
         ):
             variant_str = " → ".join(variant)
             print(f"Variant {i+1}: {variant_str}")
+            print(f"  Number of activities in path: {len(variant)}") 
             print(f"  Cases: {len(traces)}")
             print(f"  Case IDs: {', '.join(str(cid) for cid in case_ids)}")
             print(f"  Distinct activities: {', '.join(sorted(distinct_activities))}")
