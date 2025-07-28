@@ -24,8 +24,8 @@ def generate_process_based_chunks(frequent_paths, path_performance):
         path_str = " → ".join(path)
         perf = path_performance[path]
         text = (
-            f"Process '{path_str}' is a process that occurs {frequency} times. "
-            f"This process takes on average {format_duration(perf['mean'])} to complete. "
+            f"Process '{path_str}' is a transition that occurs {frequency} times. "
+            f"This transition takes on average {format_duration(perf['mean'])} to complete. "
             f"(min: {format_duration(perf['min'])}, max: {format_duration(perf['max'])}). "
         )
         # Self-loop detection and ranking
@@ -38,19 +38,19 @@ def generate_process_based_chunks(frequent_paths, path_performance):
             )
 
         if perf['mean'] == min_time:
-            text += "This is the fastest/shortest/quickest process in terms of execution time. "
+            text += "This is the fastest/shortest/quickest/lowest transition in terms of execution time. "
         if perf['mean'] == max_time:
-            text += "This is the slowest/longest process in terms of execution time. "
-            text += "This process is the bottleneck due to its long average execution time. "
-            
+            text += "This is the slowest/longest/highest transition in terms of execution time. "
+            text += "This transition is the bottleneck due to its long average execution time. "
+
         total_paths = len(frequent_paths)
         rank = i + 1
-        text += f"This is the {rank} most frequent process out of {total_paths} processes. "
+        # text += f"This is the {rank} most frequent/common transition out of {total_paths} transitions. "
 
         if frequency == max_freq:
-            text += f"This process has the highest frequency or execution count. "
+            text += f"This transition has the highest frequency or execution count out of {total_paths} transitions. "
         if frequency == min_freq:
-            text += f"This process has the lowest frequency or execution count. "
+            text += f"This transition has the lowest frequency or execution count out of {total_paths} transitions. "
 
         process_model = {
             "path": path,

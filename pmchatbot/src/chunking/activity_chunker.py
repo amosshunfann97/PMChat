@@ -1,13 +1,16 @@
 from utils.logging_utils import log
 
-def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map):
+def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map, rework_cases=None):
     """Generate activity-based chunks for RAG"""
     chunks = []
     all_activities = set()
-    
+    rework_cases = rework_cases or {}
+
     for (src, tgt), count in dfg.items():
         all_activities.add(src)
         all_activities.add(tgt)
+
+    total_activities = len(all_activities)  # Calculate total number of activities
 
     execution_counts = {}
     for activity in all_activities:
@@ -49,15 +52,20 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
         execution_counts[activity] = execution_count
         
 
-        text = f"{activity} is an activity in this workflow. "
+        text = (
+            f"{activity} is an activity in this workflow. "
+        )
         
         if execution_count == max_count:
             text += f"This activity has the highest/most frequency or execution count among all activities. "
         if execution_count == min_count:
             text += f"This activity has the lowest/least frequency or execution count among all activities. "
             
-        text += f"This activity executed {execution_count} times. "
-        
+        text += (
+            f"This activity executed {execution_count} times. "
+            f"Total number of activities: {total_activities}. "
+        )
+
         if activity in start_activities:
             text += f"{activity} is a starting activity that begins the workflow ({start_activities[activity]} cases start here). "
         if activity in end_activities:
@@ -75,6 +83,10 @@ def generate_activity_based_chunks(dfg, start_activities, end_activities, activi
         if case_ids:
             text += f"Case IDs linked to this activity: {', '.join(case_ids)}. "
         
+        # Add rework info if present
+        if rework_cases.get(activity, 0) > 0:
+            text += "This activity has rework cases. "
+            
         # Self-loop detection
         self_loop_count = dfg.get((activity, activity), 0)
         if self_loop_count > 0:

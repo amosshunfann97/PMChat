@@ -71,14 +71,14 @@ def main():
                     break
 
             event_log = prepare_pm4py_log(df)
-            dfg, start_activities, end_activities, performance_dfgs = discover_process_model(event_log)
+            dfg, start_activities, end_activities, performance_dfgs, rework_cases = discover_process_model(event_log)
             visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
             export_dfg_data(dfg, start_activities, end_activities, output_path="dfg_relationships.csv")
             visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
 
             log("Generating activity-based chunks...", level="debug")
             activity_chunks = generate_activity_based_chunks(
-                dfg, start_activities, end_activities, build_activity_case_map(df)
+                dfg, start_activities, end_activities, build_activity_case_map(df), rework_cases
             )
             log(f"   Generated {len(activity_chunks)} activity-based chunks", level="debug")
 

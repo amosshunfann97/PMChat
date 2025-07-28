@@ -34,6 +34,10 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
     min_duration = min(durations)
     max_duration = max(durations)
 
+    # Check if all variants have the same percentage
+    percentages = [(stats['frequency'] / total_cases) * 100 for stats in variant_stats]
+    all_same_percentage = all(p == percentages[0] for p in percentages)
+
     for i, stats in enumerate(variant_stats):
         variant = stats['variant']
         cases = stats['cases']
@@ -42,6 +46,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         variant_str = " → ".join(variant)
         text = (
             f"Process variant '{variant_str}' represents an execution pattern found in {frequency} cases. "
+            f"Total number of variants: {total_variants}. "
             f"This variant consists of {variant_length} activities and takes on average {format_duration(stats['avg_duration'])} to complete. "
             f"(min: {format_duration(stats['min_duration'])}, max: {format_duration(stats['max_duration'])}). "
         )
@@ -65,12 +70,15 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
         example_cases = cases
         text += f"Case IDs following this variant: {', '.join(example_cases)}. "
         
-        if rank == 1:
-            text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "
-        elif rank == total_variants:
-            text += f"This is the least common process execution pattern (rank {rank} of {total_variants}). "
+        if all_same_percentage:
+            text += "All variants have the same number of execution count. "
         else:
-            text += f"This is a mid-ranked variant (rank {rank} of {total_variants}). "
+            if rank == 1:
+                text += f"This is the most common process execution pattern (rank {rank} of {total_variants}). "
+            elif rank == total_variants:
+                text += f"This is the least common process execution pattern (rank {rank} of {total_variants}). "
+            else:
+                text += f"This is a mid-ranked variant (rank {rank} of {total_variants}). "
             
         unique_activities = set(variant)
         common_activities = set()
@@ -79,7 +87,7 @@ def generate_variant_based_chunks(dfg, start_activities, end_activities, variant
                 common_activities.update(set(other_stats['variant']))
         variant_specific = unique_activities - common_activities
         if variant_specific:
-            text += f"This variant includes unique activities not found in other common variants: {', '.join(variant_specific)}. "
+            text += f"This variant includes unique activities not found in other variants: {', '.join(variant_specific)}. "
             
         variant_model = {
             "variant": variant,

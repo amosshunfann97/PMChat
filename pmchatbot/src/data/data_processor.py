@@ -2,6 +2,7 @@ import pm4py
 from pm4py.statistics.traces.generic.log import case_statistics
 from pm4py.statistics.variants.log import get as variants_get
 from utils.logging_utils import log
+from pm4py.stats import get_rework_cases_per_activity
 
 def prepare_pm4py_log(df):
     """Convert DataFrame to PM4Py event log"""
@@ -29,7 +30,14 @@ def discover_process_model(event_log):
         'min': performance_dfg_min,
         'max': performance_dfg_max
     }
-    
+
+    # Compute rework cases per activity
+    try:
+        rework_cases = get_rework_cases_per_activity(event_log)
+    except Exception as e:
+        log(f"Error computing rework cases per activity: {e}", level="error")
+        rework_cases = {}
+
     log(f"Process discovered:", level="debug")
     log(f"   - DFG edges: {len(dfg)}", level="debug")
     log(f"   - Performance DFG edges (mean): {len(performance_dfg_mean)}", level="debug")
@@ -37,8 +45,9 @@ def discover_process_model(event_log):
     log(f"   - Performance DFG edges (max): {len(performance_dfg_max)}", level="debug")
     log(f"   - Start activities: {list(start_activities.keys())}", level="debug")
     log(f"   - End activities: {list(end_activities.keys())}", level="debug")
-    
-    return dfg, start_activities, end_activities, performance_dfgs
+    log(f"   - Activities with rework: {list(rework_cases.keys())}", level="debug")
+
+    return dfg, start_activities, end_activities, performance_dfgs, rework_cases
 
 def extract_case_variants(event_log, min_cases_per_variant=1):
     """

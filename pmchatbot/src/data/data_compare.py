@@ -9,6 +9,8 @@ from pm4py.stats import get_start_activities, get_end_activities, get_case_durat
 from pm4py.discovery import discover_performance_dfg
 from pm4py.util import constants
 from pm4py.statistics.variants.log.get import get_variants_along_with_case_durations
+from pm4py.stats import get_rework_cases_per_activity
+from pm4py.stats import get_event_attribute_values
 
 def format_duration(seconds):
     years = int(seconds // 31536000)  # 365 days
@@ -72,46 +74,81 @@ def main():
         
     # Performance DFG
     performance_dfg, perf_start_activities, perf_end_activities = discover_performance_dfg(event_log, perf_aggregation_key="mean")
-
-    print("=== DFG (frequency, mean seconds and ymdhms) ===")
-    for (src, tgt), mean_seconds in performance_dfg.items():
-        freq = dfg.get((src, tgt), 'N/A')
-        print(f"{src} -> {tgt} (frequency = {freq}  performance = {mean_seconds:.2f} seconds = {format_duration(mean_seconds)})")
+        
+    print("\n=== Activity Frequency Analysis ===")
+    try:
+        activity_freq = get_event_attribute_values(event_log, attribute="concept:name")
+        for activity, freq in sorted(activity_freq.items(), key=lambda x: x[1], reverse=True):
+            print(f"{activity}: {freq} executions")
+        print(f"Total number of activities: {len(activity_freq)}")
+    except Exception as e:
+        print(f"Error getting activity frequency: {e}")
 
     print("\n=== Start Activities ===")
     try:
-        print(get_start_activities(event_log))
+        start_acts = get_start_activities(event_log)
+        for act, freq in sorted(start_acts.items(), key=lambda x: x[1], reverse=True):
+            print(f"{act}: {freq} cases start here")
     except Exception as e:
         print(f"Error getting start activities: {e}")
 
     print("\n=== End Activities ===")
     try:
-        print(get_end_activities(event_log))
+        end_acts = get_end_activities(event_log)
+        for act, freq in sorted(end_acts.items(), key=lambda x: x[1], reverse=True):
+            print(f"{act}: {freq} cases end here")
     except Exception as e:
         print(f"Error getting end activities: {e}")
         
+    print("\n=== Rework Cases Per Activity ===")
+    try:
+        rework_cases = get_rework_cases_per_activity(event_log)
+        for activity, count in sorted(rework_cases.items(), key=lambda x: x[1], reverse=True):
+            print(f"{activity}: {count} cases with rework")
+    except Exception as e:
+        print(f"Error getting rework cases per activity: {e}")
+
+    print("\n=== Transitions (frequency, mean seconds and ymdhms) ===")
+    # Sort DFG by frequency (descending)
+    for (src, tgt), mean_seconds in sorted(performance_dfg.items(), key=lambda x: dfg.get(x[0], 0), reverse=True):
+        freq = dfg.get((src, tgt), 'N/A')
+        print(f"{src} -> {tgt} (frequency = {freq}, performance = {mean_seconds:.2f} seconds = {format_duration(mean_seconds)})")
+        
     print("\n=== Individual Case Durations ===")
+    # Sort by duration (descending)
+    case_durations = []
     for trace in event_log[:5]:  # First 5 cases
         case_id = trace.attributes['concept:name']
         duration = get_case_duration(event_log, case_id)
+        case_durations.append((case_id, duration))
+    for case_id, duration in sorted(case_durations, key=lambda x: x[1], reverse=True):
         print(f"{case_id}: {duration:.2f} seconds ({format_duration(duration)})")
 
     print("\n=== Variants with Case Durations ===")
     try:
         variants_dict, durations_dict = get_variants_along_with_case_durations(event_log)
+        # Sort variants by average duration (descending)
+        variant_stats = []
         for i, (variant, traces) in enumerate(variants_dict.items()):
-            variant_str = " → ".join(variant)
             durations = durations_dict[variant]
             avg_duration = durations.mean() if len(durations) > 0 else 0.0
             min_duration = durations.min() if len(durations) > 0 else 0.0
             max_duration = durations.max() if len(durations) > 0 else 0.0
             case_ids = [trace.attributes['concept:name'] for trace in traces]
+            distinct_activities = set(variant)  
+            variant_stats.append((variant, traces, avg_duration, min_duration, max_duration, case_ids, distinct_activities))
+        for i, (variant, traces, avg_duration, min_duration, max_duration, case_ids, distinct_activities) in enumerate(
+            sorted(variant_stats, key=lambda x: x[2], reverse=True)
+        ):
+            variant_str = " → ".join(variant)
             print(f"Variant {i+1}: {variant_str}")
             print(f"  Cases: {len(traces)}")
             print(f"  Case IDs: {', '.join(str(cid) for cid in case_ids)}")
+            print(f"  Distinct activities: {', '.join(sorted(distinct_activities))}")
             print(f"  Avg duration: {avg_duration:.2f} seconds ({format_duration(avg_duration)})")
             print(f"  Min duration: {min_duration:.2f} seconds ({format_duration(min_duration)})")
             print(f"  Max duration: {max_duration:.2f} seconds ({format_duration(max_duration)})")
+        print(f"Total number of variants: {len(variants_dict)}")
     except Exception as e:
         print(f"Error getting variants with case durations: {e}")
 

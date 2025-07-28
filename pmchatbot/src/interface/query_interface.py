@@ -1,3 +1,4 @@
+import time
 from config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS, Config
 from llm.llm_factory import get_llm, get_current_model_info
 
@@ -89,11 +90,17 @@ User Question: {question}
 Please provide a detailed process mining analysis based on the retrieved information:"""
 
     llm = get_llm()
+    answer_start_time = time.time()
     enhanced_answer = llm.invoke(enhanced_prompt)
+    answer_end_time = time.time()
+    elapsed = answer_end_time - answer_start_time
+    minutes = int(elapsed // 60)
+    seconds = int(elapsed % 60)
     
     print(f"\n💡 ANSWER:")
     print("-" * 50)
     print(f"{enhanced_answer.content}")
+    print(f"\nTime to generate this answer: {minutes} min {seconds} sec")
 
 def _handle_combined_context_query(rag_activity, rag_process, rag_variant, question):
     """Handle query combining all three contexts"""
@@ -146,11 +153,17 @@ User Question: {question}
 Please provide a detailed process mining analysis based on the retrieved information from all three perspectives:"""
 
     llm = get_llm()
+    answer_start_time = time.time()
     enhanced_answer = llm.invoke(enhanced_prompt)
+    answer_end_time = time.time()
+    elapsed = answer_end_time - answer_start_time
+    minutes = int(elapsed // 60)
+    seconds = int(elapsed % 60)
     
     print(f"\n💡 ANSWER (ALL COMBINED):")
     print("-" * 50)
     print(f"{enhanced_answer.content}")
+    print(f"\nTime to generate this answer: {minutes} min {seconds} sec")
 
 def _extract_content(content):
     """Extract actual content from record format"""
