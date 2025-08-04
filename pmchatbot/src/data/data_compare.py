@@ -110,9 +110,23 @@ def main():
 
     print("\n=== Transitions (frequency, mean seconds and ymdhms) ===")
     # Sort DFG by frequency (descending)
-    for (src, tgt), mean_seconds in sorted(performance_dfg.items(), key=lambda x: dfg.get(x[0], 0), reverse=True):
+    for (src, tgt), mean_seconds in sorted(performance_dfg.items(), key=lambda x: x[1], reverse=True):
         freq = dfg.get((src, tgt), 'N/A')
         print(f"{src} -> {tgt} (frequency = {freq}, performance = {mean_seconds:.2f} seconds = {format_duration(mean_seconds)})")
+            
+     # Count and list unique self-loop transitions (A -> A)
+    self_loop_counts = {}
+    for (act_from, act_to), count in dfg.items():
+        if act_from == act_to:
+            self_loop_counts[act_from] = count
+    total_self_loops = len(self_loop_counts)
+    print("\n=== Self-loop Transitions (A -> A) ===")
+    print(f"Total number of unique self-loop transitions: {total_self_loops}")
+    if self_loop_counts:
+        for act, count in self_loop_counts.items():
+            print(f"{act} -> {act}: {count} times")
+    else:
+        print("No self-loops found.")
         
     print("\n=== Individual Case Durations ===")
     # Sort by duration (descending)
@@ -149,6 +163,7 @@ def main():
             print(f"  Avg duration: {avg_duration:.2f} seconds ({format_duration(avg_duration)})")
             print(f"  Min duration: {min_duration:.2f} seconds ({format_duration(min_duration)})")
             print(f"  Max duration: {max_duration:.2f} seconds ({format_duration(max_duration)})")
+            print() 
         print(f"Total number of variants: {len(variants_dict)}")
     except Exception as e:
         print(f"Error getting variants with case durations: {e}")
