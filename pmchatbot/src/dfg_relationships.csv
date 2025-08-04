@@ -1,17 +1,50 @@
 source_activity,target_activity,frequency,relationship_type
-Turning & Milling - Machine 8,Turning & Milling - Machine 8,8,directly_follows
-Turning & Milling - Machine 8,Turning & Milling Q.C.,2,directly_follows
-Turning & Milling Q.C.,Turning & Milling Q.C.,1,directly_follows
-Turning & Milling Q.C.,Turning & Milling - Machine 8,1,directly_follows
-Turning & Milling Q.C.,Laser Marking - Machine 7,1,directly_follows
-Laser Marking - Machine 7,Flat Grinding - Machine 11,1,directly_follows
-Flat Grinding - Machine 11,Final Inspection Q.C.,1,directly_follows
-Final Inspection Q.C.,Final Inspection Q.C.,2,directly_follows
-Final Inspection Q.C.,Packing,1,directly_follows
-Round Grinding - Manual,Round Grinding - Manual,3,directly_follows
-Round Grinding - Manual,Final Inspection Q.C.,1,directly_follows
+Turning & Milling - Machine 5,Turning Q.C.,2,directly_follows
+Turning Q.C.,Turning & Milling - Machine 5,3,directly_follows
+Turning & Milling - Machine 5,Turning & Milling - Machine 4,1,directly_follows
+Turning & Milling - Machine 4,Turning & Milling - Machine 4,7,directly_follows
+Turning & Milling - Machine 4,Turning & Milling Q.C.,2,directly_follows
+Turning & Milling Q.C.,Laser Marking - Machine 7,5,directly_follows
+Laser Marking - Machine 7,Deburring - Manual,2,directly_follows
+Deburring - Manual,Flat Grinding - Machine 11,2,directly_follows
+Flat Grinding - Machine 11,Lapping - Machine 1,2,directly_follows
+Lapping - Machine 1,Round Grinding - Machine 3,6,directly_follows
+Round Grinding - Machine 3,Round Grinding - Machine 3,6,directly_follows
+Round Grinding - Machine 3,Round Grinding - Q.C.,1,directly_follows
+Round Grinding - Q.C.,Lapping - Machine 1,5,directly_follows
+Turning & Milling - Machine 5,Turning & Milling - Machine 5,9,directly_follows
+Turning & Milling - Machine 5,Turning & Milling Q.C.,5,directly_follows
+Turning & Milling Q.C.,Turning & Milling - Machine 5,1,directly_follows
+Lapping - Machine 1,Round Grinding - Machine 2,2,directly_follows
+Round Grinding - Machine 2,Round Grinding - Machine 2,3,directly_follows
+Round Grinding - Machine 2,Round Grinding - Q.C.,1,directly_follows
+Round Grinding - Q.C.,Round Grinding - Q.C.,3,directly_follows
+Lapping - Machine 1,Lapping - Machine 1,5,directly_follows
+Round Grinding - Machine 2,Final Inspection Q.C.,1,directly_follows
+Final Inspection Q.C.,Final Inspection Q.C.,5,directly_follows
 Final Inspection Q.C.,Laser Marking - Machine 7,1,directly_follows
-Laser Marking - Machine 7,Packing,1,directly_follows
-START,Turning & Milling - Machine 8,1,start_activity
-START,Round Grinding - Manual,1,start_activity
-Packing,END,2,end_activity
+Laser Marking - Machine 7,Grinding Rework - Machine 12,1,directly_follows
+Grinding Rework - Machine 12,Final Inspection Q.C.,1,directly_follows
+Final Inspection Q.C.,Packing,3,directly_follows
+Turning - Machine 5,Turning - Machine 5,1,directly_follows
+Turning - Machine 5,Turning & Milling - Machine 5,1,directly_follows
+Turning & Milling Q.C.,Turning Q.C.,1,directly_follows
+Turning & Milling - Machine 5,Laser Marking - Machine 7,1,directly_follows
+Laser Marking - Machine 7,Lapping - Machine 1,4,directly_follows
+Lapping - Machine 1,Round Grinding - Machine 12,2,directly_follows
+Round Grinding - Machine 12,Round Grinding - Machine 12,4,directly_follows
+Round Grinding - Machine 12,Round Grinding - Q.C.,2,directly_follows
+Round Grinding - Machine 3,Final Inspection Q.C.,4,directly_follows
+Lapping - Machine 1,Round Grinding - Machine 23,1,directly_follows
+Round Grinding - Machine 23,Round Grinding - Q.C.,1,directly_follows
+Round Grinding - Q.C.,Round Grinding - Machine 3,1,directly_follows
+Round Grinding - Machine 3,Lapping - Machine 1,1,directly_follows
+Lapping - Machine 1,Round Grinding - Manual,1,directly_follows
+Round Grinding - Manual,Round Grinding - Manual,5,directly_follows
+Round Grinding - Manual,Round Grinding - Q.C.,1,directly_follows
+START,Turning & Milling - Machine 5,4,start_activity
+START,Turning - Machine 5,1,start_activity
+START,Turning & Milling - Machine 4,1,start_activity
+Round Grinding - Machine 3,END,1,end_activity
+Packing,END,3,end_activity
+Final Inspection Q.C.,END,2,end_activity

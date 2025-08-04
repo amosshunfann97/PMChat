@@ -1,6 +1,9 @@
 import traceback
 from neo4j_graphrag.retrievers import HybridCypherRetriever
-from neo4j_graphrag.types import RetrieverResultItem
+from neo4j_graphrag.types import RetrieverResultItem, HybridSearchRanker
+from config.settings import Config
+
+config = Config()
 
 def setup_retriever(driver, chunk_type, local_embedder):
     """Setup retriever for specific chunk type"""
@@ -21,15 +24,17 @@ def setup_retriever(driver, chunk_type, local_embedder):
         # Get retrieval query for chunk type
         retrieval_query = _get_retrieval_query(chunk_type)
         
-        # Create retriever
-        retriever = HybridCypherRetriever(
-            driver=driver,
-            vector_index_name=vector_index_name,
-            fulltext_index_name=fulltext_index_name,
-            retrieval_query=retrieval_query,
-            embedder=embedder,
-            result_formatter=_custom_result_formatter
-        )
+        # Create retriever with HybridSearchRanker
+        retriever_kwargs = {
+            "driver": driver,
+            "vector_index_name": vector_index_name,
+            "fulltext_index_name": fulltext_index_name,
+            "retrieval_query": retrieval_query,
+            "embedder": embedder,
+            "result_formatter": _custom_result_formatter
+        }
+
+        retriever = HybridCypherRetriever(**retriever_kwargs)
         return retriever
     except Exception as e:
         print(f"Error setting up retriever for {chunk_type}: {e}")

@@ -5,6 +5,7 @@ from neo4j_graphrag.types import RetrieverResultItem, RetrieverResult
 from .retriever_setup import setup_retriever
 from .reranker import get_reranker
 from config.settings import Config
+from utils.logging_utils import log
 
 config = Config()
 
@@ -37,7 +38,14 @@ class EnhancedRetriever:
             # Use provided top_k or fallback to config
             if top_k is None:
                 top_k = config.RETRIEVER_TOP_K
-            base_result = self.base_retriever.search(query, top_k=top_k)
+            
+            # Log the ranker settings for debugging
+            log(f"Using hybrid ranker: {config.HYBRID_RANKER}", level="debug")
+            if config.HYBRID_RANKER.lower() == "linear":
+                log(f"Using alpha: {config.HYBRID_ALPHA}", level="debug")
+            
+            # Try to use ranker parameters if the retriever supports them
+            base_result = self._search_with_ranker_support(query, top_k)
 
             if not self.use_reranker or not self.reranker or not base_result.items:
                 return base_result
@@ -47,7 +55,16 @@ class EnhancedRetriever:
             for item in base_result.items:
                 text = self._extract_text_content(item.content)
                 metadata = item.metadata or {}
+                # Preserve the hybrid search score
+                if 'score' in metadata:
+                    metadata['hybrid_score'] = metadata['score']
                 chunks.append((text, metadata))
+
+            # Log original vs hybrid scores for debugging
+            log(f"Retrieved {len(chunks)} chunks for reranking", level="debug")
+            for i, (text, metadata) in enumerate(chunks[:3]):  # Log first 3 for debugging
+                score = metadata.get('score', 'N/A')
+                log(f"Chunk {i+1} hybrid_score: {score}", level="debug")
 
             # Rerank and select RERANKER_TOP_K best
             reranked_results = self.reranker.rerank(query, chunks, top_k=config.RERANKER_TOP_K)
@@ -57,6 +74,11 @@ class EnhancedRetriever:
             for text, metadata, rerank_score in reranked_results:
                 metadata = metadata.copy() if metadata else {}
                 metadata['rerank_score'] = rerank_score
+                metadata['final_score'] = rerank_score
+                # Log scores for debugging
+                hybrid_score = metadata.get('hybrid_score', 'N/A')
+                log(f"Item hybrid_score: {hybrid_score}, rerank_score: {rerank_score}", level="debug")
+                
                 item = RetrieverResultItem(
                     content=text,
                     metadata=metadata
@@ -65,11 +87,76 @@ class EnhancedRetriever:
 
             enhanced_result = RetrieverResult(
                 items=reranked_items,
-                metadata={"reranked": True, "original_count": len(base_result.items)}
+                metadata={
+                    "reranked": True, 
+                    "original_count": len(base_result.items),
+                    "hybrid_ranker": config.HYBRID_RANKER,
+                    "hybrid_alpha": config.HYBRID_ALPHA if config.HYBRID_RANKER.lower() == "linear" else None
+                }
             )
             return enhanced_result
         except Exception as e:
             traceback.print_exc()
+            # Fallback to basic search
+            return self.base_retriever.search(query, top_k=top_k)
+    
+    def _search_with_ranker_support(self, query: str, top_k: int) -> RetrieverResult:
+        """
+        Try different ways to use ranker parameters with the retriever
+        """
+        try:
+            # Method 1: Try with keyword arguments if supported
+            try:
+                from neo4j_graphrag.types import HybridSearchRanker
+                ranker = HybridSearchRanker(config.HYBRID_RANKER.lower())
+                
+                if config.HYBRID_RANKER.lower() == "linear":
+                    result = self.base_retriever.search(
+                        query, 
+                        top_k=top_k, 
+                        ranker=ranker, 
+                        alpha=config.HYBRID_ALPHA
+                    )
+                    log("Used search with linear ranker and alpha", level="debug")
+                    return result
+                else:
+                    result = self.base_retriever.search(
+                        query, 
+                        top_k=top_k, 
+                        ranker=ranker
+                    )
+                    log("Used search with naive ranker", level="debug")
+                    return result
+            except TypeError as e:
+                log(f"Ranker parameters not supported in search method: {e}", level="debug")
+                pass
+            
+            # Method 2: Try with search model if supported
+            try:
+                from neo4j_graphrag.types import HybridSearchModel, HybridSearchRanker
+                search_model = HybridSearchModel(
+                    query_text=query,
+                    top_k=top_k,
+                    ranker=HybridSearchRanker(config.HYBRID_RANKER.lower()),
+                    alpha=config.HYBRID_ALPHA if config.HYBRID_RANKER.lower() == "linear" else None
+                )
+                
+                # Check if retriever has a method to accept search model
+                if hasattr(self.base_retriever, 'search') and callable(getattr(self.base_retriever, 'search')):
+                    # Try passing the search model
+                    result = self.base_retriever.search(search_model)
+                    log("Used search with HybridSearchModel", level="debug")
+                    return result
+            except Exception as e:
+                log(f"HybridSearchModel not supported: {e}", level="debug")
+                pass
+            
+            # Method 3: Fallback to basic search
+            log("Falling back to basic search (ranker settings may not be applied)", level="debug")
+            return self.base_retriever.search(query, top_k=top_k)
+            
+        except Exception as e:
+            log(f"Error in ranker search: {e}", level="debug")
             return self.base_retriever.search(query, top_k=top_k)
     
     def _extract_text_content(self, content) -> str:

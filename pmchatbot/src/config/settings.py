@@ -94,6 +94,10 @@ class Config:
         self.RERANKER_TOP_K = int(os.getenv("RERANKER_TOP_K", "5"))
         self.RERANKER_DEVICE = os.getenv("RERANKER_DEVICE", "auto")
         
+        # Hybrid Search Ranker config (new)
+        self.HYBRID_RANKER = os.getenv("HYBRID_RANKER", "linear")  # "naive" or "linear"
+        self.HYBRID_ALPHA = float(os.getenv("HYBRID_ALPHA", "0.7"))  # Only for linear ranker
+        
         # Retrieval config
         self.RETRIEVER_TOP_K = int(os.getenv("RETRIEVER_TOP_K", "15"))
         
