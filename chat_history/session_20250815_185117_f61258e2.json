@@ -1,0 +1,28 @@
+{
+  "session_id": "f61258e2-465d-4cb4-a85e-fb3f8f664db0",
+  "start_time": "2025-08-15T18:51:17.312545",
+  "messages": [
+    {
+      "timestamp": "2025-08-15T18:51:17.326555",
+      "type": "system",
+      "content": "Session started",
+      "metadata": {
+        "event": "session_start"
+      }
+    },
+    {
+      "timestamp": "2025-08-15T18:52:58.245362",
+      "type": "user",
+      "content": "plug",
+      "metadata": {
+        "llm_type": "ollama",
+        "selected_part": null
+      }
+    }
+  ],
+  "metadata": {
+    "llm_type": null,
+    "selected_part": null,
+    "total_messages": 2
+  }
+}

@@ -1,0 +1,39 @@
+/* Custom CSS for Process Mining Analysis Tool */
+
+/* General styling improvements */
+.process-mining-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-indicator.connected {
+    background: #4caf50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.status-indicator.disconnected {
+    background: #f44336;
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+}
+
+.status-indicator.pending {
+    background: #ff9800;
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}

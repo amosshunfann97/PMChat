@@ -1,0 +1,19 @@
+{
+  "session_id": "eff7d519-1971-48cb-a004-26a0381c2d7f",
+  "start_time": "2025-08-15T18:55:30.338154",
+  "messages": [
+    {
+      "timestamp": "2025-08-15T18:55:30.349161",
+      "type": "system",
+      "content": "Session started",
+      "metadata": {
+        "event": "session_start"
+      }
+    }
+  ],
+  "metadata": {
+    "llm_type": null,
+    "selected_part": null,
+    "total_messages": 1
+  }
+}

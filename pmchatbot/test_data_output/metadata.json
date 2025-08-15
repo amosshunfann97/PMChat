@@ -1,0 +1,128 @@
+{
+  "generated_at": "2025-08-15T08:19:46.926235",
+  "seed": 42,
+  "datasets": {
+    "basic_100": {
+      "rows": 600,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc",
+        "resource",
+        "cost"
+      ]
+    },
+    "basic_500": {
+      "rows": 3000,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc",
+        "resource",
+        "cost"
+      ]
+    },
+    "complex_500": {
+      "rows": 3971,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc",
+        "resource",
+        "cost"
+      ]
+    },
+    "complex_1000": {
+      "rows": 7792,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc",
+        "resource",
+        "cost"
+      ]
+    },
+    "performance_5000": {
+      "rows": 37423,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc",
+        "resource",
+        "cost"
+      ]
+    }
+  },
+  "error_datasets": {
+    "empty": {
+      "rows": 0,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc"
+      ]
+    },
+    "missing_columns": {
+      "rows": 1,
+      "columns": [
+        "case_id",
+        "activity"
+      ]
+    },
+    "invalid_timestamps": {
+      "rows": 2,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc"
+      ]
+    },
+    "duplicates": {
+      "rows": 3,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc"
+      ]
+    },
+    "single_case": {
+      "rows": 1,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc"
+      ]
+    },
+    "long_names": {
+      "rows": 1,
+      "columns": [
+        "case_id",
+        "activity",
+        "timestamp",
+        "part_desc"
+      ]
+    }
+  },
+  "files": {
+    "basic_100": "test_data_output\\basic_100.csv",
+    "basic_500": "test_data_output\\basic_500.csv",
+    "complex_500": "test_data_output\\complex_500.csv",
+    "complex_1000": "test_data_output\\complex_1000.csv",
+    "performance_5000": "test_data_output\\performance_5000.csv",
+    "error_empty": "test_data_output\\error_empty.csv",
+    "error_missing_columns": "test_data_output\\error_missing_columns.csv",
+    "error_invalid_timestamps": "test_data_output\\error_invalid_timestamps.csv",
+    "error_duplicates": "test_data_output\\error_duplicates.csv",
+    "error_single_case": "test_data_output\\error_single_case.csv",
+    "error_long_names": "test_data_output\\error_long_names.csv"
+  }
+}

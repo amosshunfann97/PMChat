@@ -1,0 +1,3 @@
+case_id,activity,timestamp,part_desc
+Case_001,Activity_A,invalid_date,Part_A
+Case_002,Activity_B,2024-13-45 25:70:80,Part_B

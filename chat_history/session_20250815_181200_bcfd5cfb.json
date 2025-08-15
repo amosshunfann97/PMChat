@@ -1,0 +1,37 @@
+{
+  "session_id": "bcfd5cfb-7cc3-4b12-9a69-1afa95abb9f8",
+  "start_time": "2025-08-15T18:12:00.445845",
+  "messages": [
+    {
+      "timestamp": "2025-08-15T18:12:00.461201",
+      "type": "system",
+      "content": "Session started",
+      "metadata": {
+        "event": "session_start"
+      }
+    },
+    {
+      "timestamp": "2025-08-15T18:12:09.413918",
+      "type": "user",
+      "content": "ollama",
+      "metadata": {
+        "llm_type": null,
+        "selected_part": null
+      }
+    },
+    {
+      "timestamp": "2025-08-15T18:12:13.450258",
+      "type": "user",
+      "content": "Cable Head",
+      "metadata": {
+        "llm_type": "ollama",
+        "selected_part": null
+      }
+    }
+  ],
+  "metadata": {
+    "llm_type": null,
+    "selected_part": null,
+    "total_messages": 3
+  }
+}

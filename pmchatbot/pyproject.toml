@@ -33,6 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-asyncio",
     "black",
     "flake8"
 ]
@@ -53,4 +54,4 @@ testpaths = [
 
 [build-system]
 requires = ["setuptools>=61.0"]
-build-
+build-backend = "setuptools.build_meta"

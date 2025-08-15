@@ -1,0 +1,140 @@
+[
+  {
+    "context": "activity",
+    "query": "What is the most common activity?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "activity",
+    "query": "Which activity takes the longest time?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "activity",
+    "query": "How many times does {activity} occur?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "activity",
+    "query": "What activities come after {activity}?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "activity",
+    "query": "Which resources perform {activity}?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "process",
+    "query": "What is the average process duration?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "process",
+    "query": "How many cases are in the process?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "process",
+    "query": "What is the process efficiency?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "process",
+    "query": "Which process variant is most common?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "process",
+    "query": "What are the process bottlenecks?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "How many process variants exist?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "Which variant is most efficient?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "What is the difference between variants?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "Which variant has the highest cost?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "How do variants compare in duration?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "combined",
+    "query": "Compare activity performance across variants",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "combined",
+    "query": "Which activities are common to all variants?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "combined",
+    "query": "How do process costs vary by activity and variant?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "combined",
+    "query": "What is the overall process optimization potential?",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "combined",
+    "query": "Analyze the relationship between activities and variants",
+    "expected_type": "analysis_response",
+    "should_succeed": true
+  },
+  {
+    "context": "activity",
+    "query": "",
+    "expected_type": "error",
+    "should_succeed": false
+  },
+  {
+    "context": "process",
+    "query": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "expected_type": "response",
+    "should_succeed": true
+  },
+  {
+    "context": "variant",
+    "query": "What is the meaning of life?",
+    "expected_type": "response",
+    "should_succeed": true
+  }
+]

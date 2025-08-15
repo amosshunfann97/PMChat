@@ -1,0 +1,97 @@
+[
+  {
+    "name": "fresh_session",
+    "state": {
+      "session_active": true,
+      "llm_type": null,
+      "openai_api_key": null,
+      "selected_part": null,
+      "available_parts": [],
+      "processing_complete": false,
+      "visualizations_displayed": false,
+      "retrievers": null,
+      "current_context_mode": null,
+      "awaiting_context_selection": false
+    }
+  },
+  {
+    "name": "openai_selected",
+    "state": {
+      "session_active": true,
+      "llm_type": "openai",
+      "openai_api_key": "test_api_key_123",
+      "selected_part": null,
+      "available_parts": [
+        "Motor_Housing",
+        "Cable_Head",
+        "Connector_Pin"
+      ],
+      "processing_complete": false,
+      "visualizations_displayed": false,
+      "retrievers": null,
+      "current_context_mode": null,
+      "awaiting_context_selection": false
+    }
+  },
+  {
+    "name": "part_processed",
+    "state": {
+      "session_active": true,
+      "llm_type": "ollama",
+      "openai_api_key": null,
+      "selected_part": "Motor_Housing",
+      "available_parts": [
+        "Motor_Housing",
+        "Cable_Head",
+        "Connector_Pin"
+      ],
+      "processing_complete": true,
+      "visualizations_displayed": true,
+      "retrievers": [
+        "activity_retriever",
+        "process_retriever",
+        "variant_retriever"
+      ],
+      "current_context_mode": null,
+      "awaiting_context_selection": false
+    }
+  },
+  {
+    "name": "ready_for_queries",
+    "state": {
+      "session_active": true,
+      "llm_type": "openai",
+      "openai_api_key": "test_api_key_456",
+      "selected_part": "Cable_Head",
+      "available_parts": [
+        "Motor_Housing",
+        "Cable_Head",
+        "Connector_Pin"
+      ],
+      "processing_complete": true,
+      "visualizations_displayed": true,
+      "retrievers": [
+        "activity_retriever",
+        "process_retriever",
+        "variant_retriever"
+      ],
+      "current_context_mode": "activity",
+      "awaiting_context_selection": true
+    }
+  },
+  {
+    "name": "error_state",
+    "state": {
+      "session_active": true,
+      "llm_type": "openai",
+      "openai_api_key": "invalid_key",
+      "selected_part": "Invalid_Part",
+      "available_parts": [],
+      "processing_complete": false,
+      "visualizations_displayed": false,
+      "retrievers": null,
+      "current_context_mode": null,
+      "awaiting_context_selection": false
+    }
+  }
+]

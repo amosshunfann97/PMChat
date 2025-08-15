@@ -1,0 +1,144 @@
+[
+  {
+    "name": "happy_path",
+    "steps": [
+      {
+        "action": "start_session",
+        "expected_state": "session_active"
+      },
+      {
+        "action": "select_llm",
+        "params": {
+          "type": "openai",
+          "api_key": "test_key"
+        }
+      },
+      {
+        "action": "load_parts",
+        "expected_result": "parts_loaded"
+      },
+      {
+        "action": "select_part",
+        "params": {
+          "part": "Motor_Housing"
+        }
+      },
+      {
+        "action": "process_data",
+        "expected_result": "processing_complete"
+      },
+      {
+        "action": "generate_visualizations",
+        "expected_result": "visualizations_displayed"
+      },
+      {
+        "action": "setup_retrievers",
+        "expected_result": "retrievers_ready"
+      },
+      {
+        "action": "select_context",
+        "params": {
+          "context": "activity"
+        }
+      },
+      {
+        "action": "submit_query",
+        "params": {
+          "query": "What is the most common activity?"
+        }
+      },
+      {
+        "action": "end_session",
+        "expected_state": "session_inactive"
+      }
+    ]
+  },
+  {
+    "name": "part_switching",
+    "steps": [
+      {
+        "action": "start_session"
+      },
+      {
+        "action": "select_llm",
+        "params": {
+          "type": "ollama"
+        }
+      },
+      {
+        "action": "select_part",
+        "params": {
+          "part": "Motor_Housing"
+        }
+      },
+      {
+        "action": "process_data"
+      },
+      {
+        "action": "switch_part",
+        "params": {
+          "part": "Cable_Head"
+        }
+      },
+      {
+        "action": "process_data"
+      },
+      {
+        "action": "submit_query",
+        "params": {
+          "query": "Compare the two parts"
+        }
+      },
+      {
+        "action": "end_session"
+      }
+    ]
+  },
+  {
+    "name": "error_recovery",
+    "steps": [
+      {
+        "action": "start_session"
+      },
+      {
+        "action": "select_llm",
+        "params": {
+          "type": "openai",
+          "api_key": "invalid_key"
+        }
+      },
+      {
+        "action": "handle_error",
+        "expected_result": "error_handled"
+      },
+      {
+        "action": "select_llm",
+        "params": {
+          "type": "ollama"
+        }
+      },
+      {
+        "action": "select_part",
+        "params": {
+          "part": "Invalid_Part"
+        }
+      },
+      {
+        "action": "handle_error",
+        "expected_result": "error_handled"
+      },
+      {
+        "action": "select_part",
+        "params": {
+          "part": "Motor_Housing"
+        }
+      },
+      {
+        "action": "process_data"
+      },
+      {
+        "action": "end_session"
+      }
+    ]
+  }
+]
