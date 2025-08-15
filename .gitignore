@@ -7,3 +7,8 @@ __pycache__/
 
 # Ignore environment variables file
 .env
+
+# Ignore temporary files
+/tmp/
+*.tmp
+*.temp
