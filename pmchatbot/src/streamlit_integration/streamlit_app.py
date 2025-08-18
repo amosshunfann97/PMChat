@@ -7,6 +7,8 @@ from pmchatbot.src.chunking.variant_chunker import generate_variant_based_chunks
 from pmchatbot.src.embeddings.local_embedder import get_local_embedder
 from pmchatbot.src.database.neo4j_manager import connect_neo4j
 from pmchatbot.src.database.data_storage import store_chunks_in_neo4j
+from pmchatbot.src.visualization.dfg_visualization import visualize_dfg
+from pmchatbot.src.visualization.performance_dfg_visualization import visualize_performance_dfg
 
 st.title("Process Mining GraphRAG Frontend")
 
@@ -60,7 +62,14 @@ try:
                 else:
                     print("Neo4j connection or local embedder failed.")
 
-            st.success("Process mining, chunking, and Neo4j storage complete! You can now interact with the chatbot.")
+            st.success("Process mining, chunking, and Neo4j storage complete! Visualizing DFGs...")
+
+            # Visualize DFG and Performance DFG
+            with st.spinner("Generating DFG visualizations..."):
+                visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
+                visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
+                st.image("dfg_pm4py.png", caption="Directly-Follows Graph (DFG)")
+                st.image("performance_dfg_pm4py.png", caption="Performance DFG (Mean Duration)")
 
 except Exception as e:
     st.error(str(e))

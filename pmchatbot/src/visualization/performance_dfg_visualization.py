@@ -1,5 +1,5 @@
 import pm4py
-from utils.logging_utils import log
+from  pmchatbot.src.utils.logging_utils import log
 
 def format_duration(seconds):
     days = int(seconds // 86400)
@@ -23,9 +23,8 @@ def preprocess_performance_dfg(performance_dfg):
 def visualize_performance_dfg(performance_dfg, start_activities, end_activities, output_path="performance_dfg_pm4py.png"):
     """Visualize and save the performance DFG as PNG using PM4Py."""
     try:
-        # Pass the original numeric values, not formatted strings
-        pm4py.view_performance_dfg(performance_dfg, start_activities, end_activities, rankdir="TB")
-        # pm4py.save_vis_performance_dfg(performance_dfg, start_activities, end_activities, output_path)
+        # pm4py.view_performance_dfg(performance_dfg, start_activities, end_activities, rankdir="TB")  # Remove or comment out
+        pm4py.save_vis_performance_dfg(performance_dfg, start_activities, end_activities, output_path)  # Use this to save PNG
         log(f"Performance DFG visualization saved to {output_path}", level="info")
     except Exception as e:
         log(f"Performance DFG visualization failed: {e}", level="error")
