@@ -4,6 +4,9 @@ from pmchatbot.src.data.data_processor import prepare_pm4py_log, discover_proces
 from pmchatbot.src.chunking.activity_chunker import generate_activity_based_chunks
 from pmchatbot.src.chunking.process_chunker import generate_process_based_chunks
 from pmchatbot.src.chunking.variant_chunker import generate_variant_based_chunks
+from pmchatbot.src.embeddings.local_embedder import get_local_embedder
+from pmchatbot.src.database.neo4j_manager import connect_neo4j
+from pmchatbot.src.database.data_storage import store_chunks_in_neo4j
 
 st.title("Process Mining GraphRAG Frontend")
 
@@ -20,6 +23,7 @@ try:
                 event_log = prepare_pm4py_log(filtered_df)
                 dfg, start_activities, end_activities, performance_dfgs, rework_cases = discover_process_model(event_log)
                 
+                # Terminal logs for process discovery
                 print("DFG Edges:", len(dfg))
                 print("Start Activities:", len(start_activities))
                 print("End Activities:", len(end_activities))
@@ -27,9 +31,7 @@ try:
                 print("Rework Cases:", len(rework_cases))
 
                 # Activity-based chunking
-                activity_case_map = {}  # You may have a function to build this
-                if hasattr(filtered_df, 'case_id') and hasattr(filtered_df, 'activity'):
-                    activity_case_map = filtered_df.groupby('activity')['case_id'].apply(list).to_dict()
+                activity_case_map = filtered_df.groupby('activity')['case_id'].apply(list).to_dict()
                 activity_chunks = generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map, rework_cases)
 
                 # Process-based chunking
@@ -40,12 +42,25 @@ try:
                 variant_stats = extract_case_variants(event_log, min_cases_per_variant=1)
                 variant_chunks = generate_variant_based_chunks(dfg, start_activities, end_activities, variant_stats)
 
-                # Print chunk counts to terminal
+                # Terminal logs for chunking
                 print(f"Activity Chunks: {len(activity_chunks)}")
                 print(f"Process Chunks: {len(process_chunks)}")
                 print(f"Variant Chunks: {len(variant_chunks)}")
 
-            st.success("Process mining and chunking complete! You can now interact with the chatbot.")
+                # Store chunks in Neo4j
+                driver = connect_neo4j()
+                local_embedder = get_local_embedder(device="cpu")
+                if driver and local_embedder:
+                    store_chunks_in_neo4j(
+                        driver, dfg, start_activities, end_activities,
+                        activity_chunks, process_chunks, variant_chunks,
+                        frequent_paths, variant_stats, local_embedder
+                    )
+                    print("Chunks stored in Neo4j successfully.")
+                else:
+                    print("Neo4j connection or local embedder failed.")
+
+            st.success("Process mining, chunking, and Neo4j storage complete! You can now interact with the chatbot.")
 
 except Exception as e:
     st.error(str(e))

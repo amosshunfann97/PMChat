@@ -1,6 +1,6 @@
 import time
 import traceback
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 def store_chunks_in_neo4j(driver, dfg, start_activities, end_activities, activity_chunks, process_chunks, variant_chunks, frequent_paths, variant_stats, local_embedder):
     """Store all chunks and process data in Neo4j"""

@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer
-from config.settings import Config
-from utils.logging_utils import log
+from pmchatbot.src.config.settings import Config
+from pmchatbot.src.utils.logging_utils import log
 
 config = Config()
 
