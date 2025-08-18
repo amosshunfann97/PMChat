@@ -1,4 +1,4 @@
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 def format_duration(seconds):
     years = int(seconds // 31536000)  # 365 days

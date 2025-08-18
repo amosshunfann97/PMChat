@@ -1,4 +1,4 @@
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 def generate_process_based_chunks(frequent_paths, path_performance):
     """Generate process-based chunks for RAG with self-loop detection"""

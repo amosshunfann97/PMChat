@@ -1,7 +1,7 @@
 import pm4py
 from pm4py.statistics.traces.generic.log import case_statistics
 from pm4py.statistics.variants.log import get as variants_get
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 from pm4py.stats import get_rework_cases_per_activity
 
 def prepare_pm4py_log(df):
