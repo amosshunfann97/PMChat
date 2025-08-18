@@ -66,10 +66,28 @@ try:
 
             # Visualize DFG and Performance DFG
             with st.spinner("Generating DFG visualizations..."):
+                # Save images to disk
                 visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png")
                 visualize_performance_dfg(performance_dfgs['mean'], start_activities, end_activities, output_path="performance_dfg_pm4py.png")
+                # Show images in Streamlit
                 st.image("dfg_pm4py.png", caption="Directly-Follows Graph (DFG)")
                 st.image("performance_dfg_pm4py.png", caption="Performance DFG (Mean Duration)")
+
+            # --- Chat window below visualizations ---
+            st.sidebar.header("Query Context")
+            context = st.sidebar.radio(
+                "Choose context for your question:",
+                ["Activity-based", "Process-based", "Variant-based", "All combined"]
+            )
+
+            st.header("Process Mining Chatbot")
+            user_question = st.chat_input("Ask a process mining question:")
+
+            if user_question:
+                # Here, call your backend/query logic based on context
+                # For example:
+                answer = f"Simulated answer for context '{context}': {user_question}"  # Replace with real answer
+                st.markdown(f"**Bot:** {answer}")
 
 except Exception as e:
     st.error(str(e))
