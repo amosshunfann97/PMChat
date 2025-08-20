@@ -1,7 +1,7 @@
-from config.settings import Config
-from llm.ollama_llm import OllamaLLM
+from pmchatbot.src.config.settings import Config
+from pmchatbot.src.llm.ollama_llm import OllamaLLM
 from neo4j_graphrag.llm import OpenAILLM
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 config = Config()
 

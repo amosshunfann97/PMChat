@@ -4,8 +4,8 @@ from neo4j_graphrag.retrievers import HybridCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem, RetrieverResult
 from .retriever_setup import setup_retriever
 from .reranker import get_reranker
-from config.settings import Config
-from utils.logging_utils import log
+from pmchatbot.src.config.settings import Config
+from pmchatbot.src.utils.logging_utils import log
 
 config = Config()
 

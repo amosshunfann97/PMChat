@@ -2,7 +2,7 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import List, Tuple
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 class Reranker:
     """Generic reranker for improving retrieval quality"""
