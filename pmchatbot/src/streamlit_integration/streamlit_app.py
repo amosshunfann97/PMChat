@@ -167,18 +167,53 @@ if processing_started and not dfg_ready:
                     animation: spin 1s linear infinite;
                     margin-bottom: 2rem;
                 "></div>
-                <h2 style="color: #E6E6FA; margin-bottom: 1rem; font-size: 2rem; font-weight: 700; width: 100%; text-align: center;">
-                    Processing Your Data
-                </h2>
-                <p style="color: #E6E6FA; font-size: 1.15rem; margin: 0; line-height: 1.5; width: 100%; text-align: center;">
-                    Analyzing process data, generating visualizations, and setting up GraphRAG...
-                </p>
+                <div style="
+                    width: 100%; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    margin-bottom: 1rem;
+                ">
+                    <span style="
+                        color: #E6E6FA;
+                        font-size: 2rem;
+                        font-weight: 700;
+                        user-select: none;
+                        pointer-events: none;
+                        text-align: center;
+                        width: 100%;
+                        ">
+                        Processing Your Data
+                    </span>
+                </div>
+                <div style="
+                    width: 100%; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center;
+                ">
+                    <span style="
+                        color: #E6E6FA;
+                        font-size: 1.15rem;
+                        line-height: 1.5;
+                        user-select: none;
+                        pointer-events: none;
+                        text-align: center;
+                        width: 100%;
+                        ">
+                        Analyzing process data, generating visualizations, and setting up GraphRAG...
+                    </span>
+                </div>
             </div>
         </div>
         <style>
         @keyframes spin {{
             0% {{ transform: rotate(0deg); }}
             100% {{ transform: rotate(360deg); }}
+        }}
+        #loading-overlay * {{
+            user-select: none !important;
+            pointer-events: none !important;
         }}
         </style>
         """,
