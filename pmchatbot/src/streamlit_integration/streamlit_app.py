@@ -28,15 +28,39 @@ def load_csv_data():
 processing_started = st.session_state.get("processing_started", False)
 dfg_ready = st.session_state.get("dfg_image_ready", False)
 
+# Function to get base64 encoded image
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+def get_base64_image_from_resources(filename):
+    """Get base64 encoded image from package resources"""
+    try:
+        with importlib.resources.open_binary(images, filename) as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except FileNotFoundError:
+        return None
+
 # Sidebar: Part selection and process button
 with st.sidebar:
     # Sidebar header always at the top
     if dfg_ready or processing_started:
+        # Get base64 for sidebar background image
+        sidebar_bg_image = get_base64_image_from_resources("loading_background.jpg")
+
         st.markdown(
-            """
-            <div style="text-align: center; margin-bottom: 1.5rem; 
-                        padding: 1rem; background: linear-gradient(135deg, #7B61FF 0%, #9c88ff 100%); 
-                        border-radius: 10px; color: white;">
+            f"""
+            <div style="
+                text-align: center; 
+                margin-bottom: 1.5rem; 
+                padding: 1rem; 
+                background: linear-gradient(135deg, #7B61FF 0%, #9c88ff 100%);
+                background-image: url('data:image/jpeg;base64,{sidebar_bg_image}');
+                background-size: cover;
+                background-position: center;
+                border-radius: 10px; 
+                color: white;
+            ">
                 <h4 style="margin: 0; font-size: 1.1rem; font-weight: 600;">
                     Process Mining Chatbot
                 </h4>
@@ -319,7 +343,7 @@ elif dfg_ready:
         if not st.session_state.chat_history:
             st.markdown(
                 """
-                <div style="background-color: #30224d; padding: 1rem; margin: 1rem 0; border-radius: 8px;">
+                <div style="background-color: #4c448e; padding: 1rem; margin: 1rem 0; border-radius: 8px;">
                     <h4 style="margin: 0 0 0.5rem 0; color: #E6E6FA;">Getting Started</h4>
                     <p style="margin: 0; color:  #E6E6FA;">
                         Choose your <strong>Query Context</strong> from the sidebar, then ask your process mining question below!
