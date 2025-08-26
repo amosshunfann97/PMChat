@@ -6,7 +6,7 @@ Contains all styling, display functions, and UI-related utilities.
 import streamlit as st
 import base64
 import importlib.resources
-from pmchatbot.assets import images
+from ..assets import images
 
 
 def get_base64_image(image_path):
