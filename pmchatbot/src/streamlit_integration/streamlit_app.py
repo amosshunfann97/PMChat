@@ -13,6 +13,8 @@ from pmchatbot.src.retrieval.enhanced_retriever import setup_enhanced_retriever
 from pmchatbot.src.llm.llm_factory import get_llm
 from pmchatbot.src.config.settings import PROCESS_MINING_CONTEXT
 import base64
+import importlib.resources
+from pmchatbot.assets import images
 
 st.set_page_config(page_title="Process Mining Chatbot using GraphRAG", page_icon="🤖", layout="wide")
 
@@ -122,9 +124,17 @@ def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 
+def get_base64_image_from_resources(filename):
+    """Get base64 encoded image from package resources"""
+    try:
+        with importlib.resources.open_binary(images, filename) as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except FileNotFoundError:
+        return None
+
 # Show overlay loading screen when processing
 if processing_started and not dfg_ready:
-    bg_image = get_base64_image(r"C:\Users\shunf\OneDrive - Amos Wu\OneDrive\Downloads\de346d01-f1ac-475e-9174-240818d49532.jpg")
+    bg_image = get_base64_image_from_resources("loading_background.jpg")
     
     st.markdown(
         f"""
