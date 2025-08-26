@@ -1,6 +1,6 @@
 import time
-from config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS, Config
-from llm.llm_factory import get_llm, get_current_model_info
+from pmchatbot.src.config.settings import PROCESS_MINING_CONTEXT, EXAMPLE_QUESTIONS, Config
+from pmchatbot.src.llm.llm_factory import get_llm, get_current_model_info
 
 config = Config()
 
