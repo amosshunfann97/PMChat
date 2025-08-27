@@ -279,16 +279,49 @@ def render_part_selection_sidebar(part_options, selected_part):
     return selected_part, process_clicked
 
 
+def _on_llm_toggle_change():
+    """Callback function when LLM toggle changes."""
+    # Immediately update LLM configuration when toggle changes
+    from pmchatbot.src.streamlit_integration.core.state_manager import get_dynamic_llm
+    
+    llm_type = "openai" if st.session_state.llm_type_toggle else "ollama"
+    
+    # Get config and validate
+    from pmchatbot.src.config.settings import Config
+    config = Config()
+    
+    if llm_type == "openai":
+        valid = bool(config.OPENAI_API_KEY and config.OPENAI_API_KEY.startswith("sk-"))
+    else:
+        valid = bool(config.LLM_MODEL_NAME_OLLAMA and config.OLLAMA_BASE_URL)
+    
+    # Update session state immediately
+    st.session_state.llm_config = {
+        "type": llm_type,
+        "valid": valid
+    }
+    
+    # Initialize LLM immediately if valid
+    if valid:
+        try:
+            st.session_state.llm = get_dynamic_llm(st.session_state.llm_config)
+        except Exception as e:
+            st.session_state.llm = None
+
+
 def render_llm_configuration_sidebar():
     """Render the LLM configuration interface in sidebar."""
     st.header("LLM Configuration")
     
-    # Get current config to maintain state
-    current_config = st.session_state.get("llm_config", {})
-    current_type = current_config.get("type", "ollama")
+    # Initialize toggle state if not present
+    if "llm_type_toggle" not in st.session_state:
+        st.session_state.llm_type_toggle = False  # Default to Ollama
     
-    # Simple LLM Type toggle - only switch between types
-    llm_type = st.toggle("Use OpenAI API", value=(current_type == "openai"), help="Toggle off for Ollama (local), on for OpenAI API")
+    # Simple LLM Type toggle with callback
+    llm_type = st.toggle("Use OpenAI API", 
+                        help="Toggle off for Ollama (local), on for OpenAI API. Configure API keys and models in .env file",
+                        key="llm_type_toggle",
+                        on_change=_on_llm_toggle_change)
     
     # Get actual configuration from .env to show status
     from pmchatbot.src.config.settings import Config
@@ -324,9 +357,6 @@ def render_llm_configuration_sidebar():
             "type": "ollama", 
             "valid": valid
         }
-    
-    # Add reminder about .env configuration
-    st.info("Configuration is done via .env file")
     
     return llm_config
 

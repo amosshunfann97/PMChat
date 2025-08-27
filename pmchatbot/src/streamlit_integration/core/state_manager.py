@@ -159,26 +159,34 @@ def get_chat_history():
 
 def update_llm_configuration(llm_config):
     """Update LLM configuration and reinitialize LLM if needed."""
-    # Check if configuration has changed
-    current_config = st.session_state.get("llm_config", {})
+    # Always update the configuration
+    st.session_state.llm_config = llm_config
     
-    if llm_config != current_config:
-        st.session_state.llm_config = llm_config
-        
-        # Initialize LLM with new config if valid
-        if llm_config.get("valid", False):
-            try:
-                st.session_state.llm = get_dynamic_llm(llm_config)
-                return True  # Configuration updated successfully
-            except Exception as e:
-                st.error(f"Failed to update LLM configuration: {str(e)}")
-                st.session_state.llm = None
-                return False
-        else:
-            # Clear LLM if configuration is invalid
+    # Check if LLM type changed by comparing with current LLM instance
+    current_llm_type = None
+    if hasattr(st.session_state, 'llm') and st.session_state.llm is not None:
+        # Determine current LLM type from the instance
+        from pmchatbot.src.llm.ollama_llm import OllamaLLM
+        from neo4j_graphrag.llm import OpenAILLM
+        if isinstance(st.session_state.llm, OpenAILLM):
+            current_llm_type = "openai"
+        elif isinstance(st.session_state.llm, OllamaLLM):
+            current_llm_type = "ollama"
+    
+    # Reinitialize LLM if type changed and config is valid
+    if llm_config.get("type") != current_llm_type and llm_config.get("valid", False):
+        try:
+            st.session_state.llm = get_dynamic_llm(llm_config)
+            return True
+        except Exception as e:
+            st.error(f"Failed to update LLM configuration: {str(e)}")
             st.session_state.llm = None
+            return False
+    elif not llm_config.get("valid", False):
+        # Clear LLM if configuration is invalid
+        st.session_state.llm = None
     
-    return llm_config.get("valid", False)  # Return validity status
+    return llm_config.get("valid", False)
 
 
 def get_llm_configuration():

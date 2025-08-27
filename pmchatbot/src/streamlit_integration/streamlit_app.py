@@ -58,6 +58,8 @@ def main():
         
         # LLM Configuration
         llm_config = render_llm_configuration_sidebar()
+        
+        # Update LLM configuration immediately when toggle changes
         update_llm_configuration(llm_config)
         
         # Part selection
