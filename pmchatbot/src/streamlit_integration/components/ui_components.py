@@ -369,3 +369,104 @@ def render_context_selection_sidebar():
         ["Activity-based", "Process-based", "Variant-based", "All combined"]
     )
     return context
+
+
+def render_retrieval_settings_sidebar(context):
+    """Render the retrieval settings sliders in sidebar."""
+    st.header("Retrieval Settings")
+    
+    # Get maximum chunk counts based on selected context
+    max_chunks = _get_max_chunks_for_context(context)
+    
+    # Handle edge case where max_chunks is 1 (Streamlit requires min < max)
+    if max_chunks <= 1:
+        st.info(f"📊 Only {max_chunks} chunk(s) available - using fixed values")
+        # Use fixed values when only 1 chunk available
+        retriever_top_k = 1
+        reranker_top_k = 1
+        st.write(f"**Retriever Top-K:** {retriever_top_k}")
+        st.write(f"**Reranker Top-K:** {reranker_top_k}")
+    else:
+        # Retriever Top-K section
+        st.markdown("**Retriever Top-K**")
+        
+        # Use columns to prevent value cutoff - give more space to slider
+        col1, col2 = st.columns([9, 1])
+        with col1:
+            retriever_top_k = st.slider(
+                "retriever_slider",
+                min_value=1,
+                max_value=max_chunks,
+                value=min(st.session_state.get("retriever_top_k_slider", 15), max_chunks),
+                help=f"Number of chunks to retrieve before reranking",
+                label_visibility="collapsed"
+            )
+        with col2:
+            st.write("")  # Keep column but leave it blank
+        
+        st.caption(f"Range: 1 to {max_chunks} chunks")
+        
+        # Add spacing between sliders
+        st.markdown("<div style='margin: 15px 0;'></div>", unsafe_allow_html=True)
+        
+        # Reranker Top-K section
+        max_reranker = min(retriever_top_k, max_chunks)
+        
+        # Check if reranker would also have min=max issue
+        if max_reranker <= 1:
+            st.markdown("**Reranker Top-K**")
+            reranker_top_k = 1
+            st.write(f"**Value:** {reranker_top_k} (fixed)")
+        else:
+            st.markdown("**Reranker Top-K**")
+            
+            # Use columns to prevent value cutoff
+            col1, col2 = st.columns([9, 1])
+            with col1:
+                reranker_top_k = st.slider(
+                    "reranker_slider",
+                    min_value=1,
+                    max_value=max_reranker,
+                    value=min(st.session_state.get("reranker_top_k_slider", 5), max_reranker),
+                    help=f"Number of final chunks after reranking",
+                    label_visibility="collapsed"
+                )
+            with col2:
+                st.write("")  # Keep column but leave it blank
+            
+            st.caption(f"Range: 1 to {max_reranker} chunks")
+    
+    # Store in session state (manual management for reactivity)
+    st.session_state.retriever_top_k_slider = retriever_top_k
+    st.session_state.reranker_top_k_slider = reranker_top_k
+    
+    return retriever_top_k, reranker_top_k
+
+
+def _get_max_chunks_for_context(context):
+    """Get maximum available chunks for the selected context."""
+    try:
+        if context == "Activity-based":
+            if "retriever_activity" in st.session_state:
+                return st.session_state.retriever_activity.get_total_chunk_count()
+        elif context == "Process-based":
+            if "retriever_process" in st.session_state:
+                return st.session_state.retriever_process.get_total_chunk_count()
+        elif context == "Variant-based":
+            if "retriever_variant" in st.session_state:
+                return st.session_state.retriever_variant.get_total_chunk_count()
+        else:  # All combined
+            # For combined context, use the maximum of all available chunks
+            max_chunks = 0
+            if "retriever_activity" in st.session_state:
+                max_chunks = max(max_chunks, st.session_state.retriever_activity.get_total_chunk_count())
+            if "retriever_process" in st.session_state:
+                max_chunks = max(max_chunks, st.session_state.retriever_process.get_total_chunk_count())
+            if "retriever_variant" in st.session_state:
+                max_chunks = max(max_chunks, st.session_state.retriever_variant.get_total_chunk_count())
+            return max_chunks if max_chunks > 0 else 50
+    except Exception as e:
+        # Fallback to a reasonable default
+        pass
+    
+    return 50  # Default fallback

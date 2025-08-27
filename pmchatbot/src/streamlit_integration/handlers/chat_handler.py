@@ -23,33 +23,35 @@ def display_chat_history():
                     st.write(msg["content"])
 
 
-def get_retrieved_information(context, user_question):
+def get_retrieved_information(context, user_question, retriever_top_k=None, reranker_top_k=None):
     """
     Retrieve relevant information based on the selected context.
     
     Args:
         context: The selected context type
         user_question: The user's question
+        retriever_top_k: Number of chunks to retrieve (None for config default)
+        reranker_top_k: Number of chunks after reranking (None for config default)
         
     Returns:
         tuple: (retrieved_info, context_label)
     """
     if context == "Activity-based":
-        result = st.session_state.retriever_activity.search(user_question)
+        result = st.session_state.retriever_activity.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
         retrieved_info = "\n".join(str(item.content) for item in result.items)
         context_label = "ACTIVITY-BASED"
     elif context == "Process-based":
-        result = st.session_state.retriever_process.search(user_question)
+        result = st.session_state.retriever_process.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
         retrieved_info = "\n".join(str(item.content) for item in result.items)
         context_label = "PROCESS-BASED"
     elif context == "Variant-based":
-        result = st.session_state.retriever_variant.search(user_question)
+        result = st.session_state.retriever_variant.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
         retrieved_info = "\n".join(str(item.content) for item in result.items)
         context_label = "VARIANT-BASED"
     else:  # All combined
-        result_a = st.session_state.retriever_activity.search(user_question)
-        result_p = st.session_state.retriever_process.search(user_question)
-        result_v = st.session_state.retriever_variant.search(user_question)
+        result_a = st.session_state.retriever_activity.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
+        result_p = st.session_state.retriever_process.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
+        result_v = st.session_state.retriever_variant.search(user_question, top_k=retriever_top_k, reranker_top_k=reranker_top_k)
         retrieved_info = (
             "Activity Chunks:\n" + "\n".join(str(item.content) for item in result_a.items) +
             "\nProcess Chunks:\n" + "\n".join(str(item.content) for item in result_p.items) +
@@ -87,12 +89,14 @@ Please provide a detailed process mining analysis based on the retrieved informa
     return answer
 
 
-def handle_chat_interaction(context):
+def handle_chat_interaction(context, retriever_top_k=None, reranker_top_k=None):
     """
     Handle the complete chat interaction flow.
     
     Args:
         context: The selected context for the query
+        retriever_top_k: Number of chunks to retrieve (None for config default)
+        reranker_top_k: Number of chunks after reranking (None for config default)
         
     Returns:
         bool: True if a new message was processed, False otherwise
@@ -127,7 +131,7 @@ def handle_chat_interaction(context):
 
         # Retrieve relevant chunks and generate response
         with st.spinner("Generating response..."):
-            retrieved_info, context_label = get_retrieved_information(context, user_question)
+            retrieved_info, context_label = get_retrieved_information(context, user_question, retriever_top_k, reranker_top_k)
             answer = generate_llm_response(user_question, retrieved_info, context_label)
 
         # Add bot response and display it
@@ -140,12 +144,14 @@ def handle_chat_interaction(context):
     return False
 
 
-def render_chat_interface(context):
+def render_chat_interface(context, retriever_top_k=None, reranker_top_k=None):
     """
     Render the complete chat interface including history and input.
     
     Args:
         context: The selected context for queries
+        retriever_top_k: Number of chunks to retrieve (None for config default)
+        reranker_top_k: Number of chunks after reranking (None for config default)
     """
     if not has_retrievers_ready():
         st.error("Chat functionality is not available. Please complete the data processing first.")
@@ -170,7 +176,7 @@ def render_chat_interface(context):
         render_chat_getting_started()
     
     # Handle chat interaction
-    new_message_processed = handle_chat_interaction(context)
+    new_message_processed = handle_chat_interaction(context, retriever_top_k, reranker_top_k)
     
     # Force rerun if new message was processed to update display
     if new_message_processed:

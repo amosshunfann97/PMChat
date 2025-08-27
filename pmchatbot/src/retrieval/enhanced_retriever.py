@@ -12,8 +12,9 @@ config = Config()
 class EnhancedRetriever:
     """Enhanced retriever with reranking capability"""
     
-    def __init__(self, base_retriever: HybridCypherRetriever, use_reranker: bool = True):
+    def __init__(self, base_retriever: HybridCypherRetriever, chunk_type: str, use_reranker: bool = True):
         self.base_retriever = base_retriever
+        self.chunk_type = chunk_type  # Store chunk type for database queries
         self.use_reranker = use_reranker
         self.reranker = None
         
@@ -23,13 +24,14 @@ class EnhancedRetriever:
             except Exception as e:
                 self.use_reranker = False
 
-    def search(self, query: str, top_k: int = None) -> RetrieverResult:
+    def search(self, query: str, top_k: int = None, reranker_top_k: int = None) -> RetrieverResult:
         """
         Search with optional reranking
 
         Args:
             query: Search query
-            top_k: Number of results to return
+            top_k: Number of results to return from retriever
+            reranker_top_k: Number of results to return after reranking (if None, uses config.RERANKER_TOP_K)
 
         Returns:
             RetrieverResult with potentially reranked results
@@ -66,8 +68,12 @@ class EnhancedRetriever:
                 score = metadata.get('score', 'N/A')
                 log(f"Chunk {i+1} hybrid_score: {score}", level="debug")
 
-            # Rerank and select RERANKER_TOP_K best
-            reranked_results = self.reranker.rerank(query, chunks, top_k=config.RERANKER_TOP_K)
+            # Use provided reranker_top_k or fallback to config
+            if reranker_top_k is None:
+                reranker_top_k = config.RERANKER_TOP_K
+            
+            # Rerank and select the specified number of best results
+            reranked_results = self.reranker.rerank(query, chunks, top_k=reranker_top_k)
 
             # Convert back to RetrieverResultItem format
             reranked_items = []
@@ -159,6 +165,21 @@ class EnhancedRetriever:
             log(f"Error in ranker search: {e}", level="debug")
             return self.base_retriever.search(query, top_k=top_k)
     
+    def get_total_chunk_count(self) -> int:
+        """Get total number of chunks available in the database for this retriever"""
+        try:
+            # Access the Neo4j driver through the base retriever
+            driver = self.base_retriever.driver
+            chunk_type = self.chunk_type  # Use stored chunk type
+            
+            with driver.session() as session:
+                result = session.run(f"MATCH (n:{chunk_type}) RETURN count(n) as count")
+                record = result.single()
+                return record["count"] if record else 0
+        except Exception as e:
+            log(f"Error getting chunk count: {e}", level="warning")
+            return 100  # Return a reasonable default
+    
     def _extract_text_content(self, content) -> str:
         """Extract text content from various content formats"""
         content_str = str(content)
@@ -189,9 +210,10 @@ def setup_enhanced_retriever(driver, chunk_type: str, local_embedder, use_rerank
         if use_reranker is None:
             use_reranker = config.USE_RERANKER
         
-        # Create enhanced retriever
+        # Create enhanced retriever with chunk_type
         enhanced_retriever = EnhancedRetriever(
             base_retriever=base_retriever,
+            chunk_type=chunk_type,  # Pass chunk_type to constructor
             use_reranker=use_reranker
         )
         

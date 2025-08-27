@@ -30,7 +30,8 @@ from pmchatbot.src.streamlit_integration.components.ui_components import (
     display_dfg_images,
     render_part_selection_sidebar,
     render_llm_configuration_sidebar,
-    render_context_selection_sidebar
+    render_context_selection_sidebar,
+    render_retrieval_settings_sidebar
 )
 from pmchatbot.src.streamlit_integration.handlers.chat_handler import render_chat_interface
 from pmchatbot.src.data.data_loader import list_part_descs
@@ -74,8 +75,14 @@ def main():
         # Context selection (only show if DFG is ready)
         if dfg_ready:
             context = render_context_selection_sidebar()
+            # Retrieval settings sliders (only show if context is selected)
+            if context:
+                retriever_top_k, reranker_top_k = render_retrieval_settings_sidebar(context)
+            else:
+                retriever_top_k, reranker_top_k = None, None
         else:
             context = None
+            retriever_top_k, reranker_top_k = None, None
 
     # Main content logic based on application state
     if not selected_part and not processing_started:
@@ -92,7 +99,7 @@ def main():
         
     elif dfg_ready:
         # Results state: Show visualizations and chat
-        handle_results_display(context)
+        handle_results_display(context, retriever_top_k, reranker_top_k)
         
     else:
         # Fallback for undefined states
@@ -123,14 +130,14 @@ def handle_loading_and_processing(selected_part):
         st.rerun()
 
 
-def handle_results_display(context):
+def handle_results_display(context, retriever_top_k=None, reranker_top_k=None):
     """Handle the display of results including visualizations and chat."""
     # Display DFG images
     display_dfg_images()
     
     # Show chat interface if context is selected
     if context:
-        render_chat_interface(context)
+        render_chat_interface(context, retriever_top_k, reranker_top_k)
 
 
 # Main execution flow

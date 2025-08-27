@@ -40,6 +40,14 @@ def initialize_session_state():
             "valid": True
         }
     
+    # Initialize slider values with config defaults
+    from pmchatbot.src.config.settings import Config
+    config = Config()
+    if "retriever_top_k_slider" not in st.session_state:
+        st.session_state.retriever_top_k_slider = config.RETRIEVER_TOP_K
+    if "reranker_top_k_slider" not in st.session_state:
+        st.session_state.reranker_top_k_slider = config.RERANKER_TOP_K
+    
     # Initialize LLM if not already present
     if "llm" not in st.session_state and st.session_state.llm_config.get("valid", False):
         try:
@@ -192,3 +200,17 @@ def update_llm_configuration(llm_config):
 def get_llm_configuration():
     """Get current LLM configuration."""
     return st.session_state.get("llm_config", {})
+
+
+def get_retrieval_settings():
+    """Get current retrieval settings from session state."""
+    return {
+        "retriever_top_k": st.session_state.get("retriever_top_k_slider"),
+        "reranker_top_k": st.session_state.get("reranker_top_k_slider")
+    }
+
+
+def update_retrieval_settings(retriever_top_k, reranker_top_k):
+    """Update retrieval settings in session state."""
+    st.session_state.retriever_top_k_slider = retriever_top_k
+    st.session_state.reranker_top_k_slider = reranker_top_k
