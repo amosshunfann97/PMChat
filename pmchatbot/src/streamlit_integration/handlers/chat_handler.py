@@ -5,7 +5,7 @@ Handles chat interface, message processing, and retrieval logic.
 
 import streamlit as st
 from pmchatbot.src.config.settings import PROCESS_MINING_CONTEXT
-from pmchatbot.src.streamlit_integration.core.state_manager import add_chat_message, get_chat_history, has_retrievers_ready
+from pmchatbot.src.streamlit_integration.core.state_manager import add_chat_message, get_chat_history, has_retrievers_ready, get_llm_configuration
 
 
 def display_chat_history():
@@ -101,6 +101,20 @@ def handle_chat_interaction(context):
         st.error("Retrievers are not ready. Please ensure the data processing is complete.")
         return False
     
+    # Check LLM configuration validity
+    llm_config = get_llm_configuration()
+    if not llm_config.get("valid", False):
+        if llm_config.get("type") == "openai":
+            st.error("Please configure OpenAI API key in the .env file to use the chat functionality.")
+        else:
+            st.error("Please configure Ollama settings in the .env file to use the chat functionality.")
+        return False
+    
+    # Check if LLM is available in session state
+    if "llm" not in st.session_state or st.session_state.llm is None:
+        st.error("LLM is not initialized. Please check your .env configuration.")
+        return False
+    
     user_question = st.chat_input("Ask a process mining question:")
     
     if user_question:
@@ -135,6 +149,15 @@ def render_chat_interface(context):
     """
     if not has_retrievers_ready():
         st.error("Chat functionality is not available. Please complete the data processing first.")
+        return
+    
+    # Check LLM configuration
+    llm_config = get_llm_configuration()
+    if not llm_config.get("valid", False):
+        if llm_config.get("type") == "openai":
+            st.warning("⚠️ Please configure OpenAI API key in the .env file to enable chat functionality.")
+        else:
+            st.warning("⚠️ Please configure Ollama settings in the .env file to enable chat functionality.")
         return
     
     # Display chat history

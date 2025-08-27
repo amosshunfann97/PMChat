@@ -15,7 +15,7 @@ from pmchatbot.src.database.data_storage import store_chunks_in_neo4j
 from pmchatbot.src.visualization.dfg_visualization import visualize_dfg
 from pmchatbot.src.visualization.performance_dfg_visualization import visualize_performance_dfg
 from pmchatbot.src.retrieval.enhanced_retriever import setup_enhanced_retriever
-from pmchatbot.src.llm.llm_factory import get_llm
+from pmchatbot.src.llm.llm_factory import get_llm, get_dynamic_llm
 
 
 @st.cache_data
@@ -33,6 +33,20 @@ def initialize_session_state():
         st.session_state.dfg_image_ready = False
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if "llm_config" not in st.session_state:
+        # Default to ollama, configuration will be read from .env
+        st.session_state.llm_config = {
+            "type": "ollama",
+            "valid": True
+        }
+    
+    # Initialize LLM if not already present
+    if "llm" not in st.session_state and st.session_state.llm_config.get("valid", False):
+        try:
+            st.session_state.llm = get_dynamic_llm(st.session_state.llm_config)
+        except Exception as e:
+            st.error(f"Failed to initialize LLM on startup: {str(e)}")
+            st.session_state.llm = None
 
 
 def clear_session_for_new_processing():
@@ -42,7 +56,7 @@ def clear_session_for_new_processing():
     st.session_state.chat_history = []
     
     # Clear any retriever references to ensure clean state
-    retriever_keys = ["retriever_activity", "retriever_process", "retriever_variant"]
+    retriever_keys = ["retriever_activity", "retriever_process", "retriever_variant", "llm"]
     for key in retriever_keys:
         if key in st.session_state:
             del st.session_state[key]
@@ -94,7 +108,13 @@ def process_data_and_setup_graphrag(selected_part):
         st.session_state.retriever_activity = setup_enhanced_retriever(driver, "ActivityChunk", local_embedder)
         st.session_state.retriever_process = setup_enhanced_retriever(driver, "ProcessChunk", local_embedder)
         st.session_state.retriever_variant = setup_enhanced_retriever(driver, "VariantChunk", local_embedder)
-        st.session_state.llm = get_llm()
+        
+        # Initialize LLM with current configuration
+        try:
+            st.session_state.llm = get_dynamic_llm(st.session_state.llm_config)
+        except Exception as e:
+            st.error(f"Failed to initialize LLM: {str(e)}")
+            st.session_state.llm = None
         
         success = True
     else:
@@ -135,3 +155,32 @@ def add_chat_message(role, content):
 def get_chat_history():
     """Get the current chat history."""
     return st.session_state.chat_history
+
+
+def update_llm_configuration(llm_config):
+    """Update LLM configuration and reinitialize LLM if needed."""
+    # Check if configuration has changed
+    current_config = st.session_state.get("llm_config", {})
+    
+    if llm_config != current_config:
+        st.session_state.llm_config = llm_config
+        
+        # Initialize LLM with new config if valid
+        if llm_config.get("valid", False):
+            try:
+                st.session_state.llm = get_dynamic_llm(llm_config)
+                return True  # Configuration updated successfully
+            except Exception as e:
+                st.error(f"Failed to update LLM configuration: {str(e)}")
+                st.session_state.llm = None
+                return False
+        else:
+            # Clear LLM if configuration is invalid
+            st.session_state.llm = None
+    
+    return llm_config.get("valid", False)  # Return validity status
+
+
+def get_llm_configuration():
+    """Get current LLM configuration."""
+    return st.session_state.get("llm_config", {})

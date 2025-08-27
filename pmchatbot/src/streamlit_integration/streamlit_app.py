@@ -18,7 +18,8 @@ from pmchatbot.src.streamlit_integration.core.state_manager import (
     initialize_session_state, 
     clear_session_for_new_processing,
     get_application_state,
-    process_data_and_setup_graphrag
+    process_data_and_setup_graphrag,
+    update_llm_configuration
 )
 from pmchatbot.src.streamlit_integration.components.ui_components import (
     render_sidebar_header,
@@ -28,6 +29,7 @@ from pmchatbot.src.streamlit_integration.components.ui_components import (
     render_fallback_message,
     display_dfg_images,
     render_part_selection_sidebar,
+    render_llm_configuration_sidebar,
     render_context_selection_sidebar
 )
 from pmchatbot.src.streamlit_integration.handlers.chat_handler import render_chat_interface
@@ -53,6 +55,10 @@ def main():
         # Show header if processing started or DFG is ready
         if dfg_ready or processing_started:
             render_sidebar_header()
+        
+        # LLM Configuration
+        llm_config = render_llm_configuration_sidebar()
+        update_llm_configuration(llm_config)
         
         # Part selection
         selected_part, process_clicked = render_part_selection_sidebar(
