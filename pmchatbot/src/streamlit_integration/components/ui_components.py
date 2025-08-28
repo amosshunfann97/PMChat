@@ -233,9 +233,6 @@ def render_chat_getting_started():
         f"""
         <div style="background-color: #4c448e; padding: 1rem; margin: 1rem 0; border-radius: 8px;">
             <h4 style="margin: 0 0 0.5rem 0; color: #E6E6FA;">Getting Started</h4>
-            <p style="margin: 0 0 0.5rem 0; color: #E6E6FA; font-size: 0.9rem;">
-                <strong>Active LLM:</strong> {llm_display}
-            </p>
             <p style="margin: 0; color:  #E6E6FA;">
                 Choose your <strong>Query Context</strong> from the sidebar, then ask your process mining question below!
                 <br>• <strong>Activity-based:</strong> Focus on specific activities
