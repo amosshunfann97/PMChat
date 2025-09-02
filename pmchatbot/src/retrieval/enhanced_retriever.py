@@ -24,6 +24,21 @@ class EnhancedRetriever:
             except Exception as e:
                 self.use_reranker = False
 
+    def _sanitize_lucene_query(self, text: str) -> str:
+        """Escape Lucene special characters to prevent parser errors in fulltext queries."""
+        if not text:
+            return ""
+        # Escape backslash first
+        text = text.replace("\\", "\\\\")
+        # Lucene special characters to escape
+        specials = ['+','-','!','(',')','{','}','[',']','^','"','~','*','?',';',':','/']
+        for ch in specials:
+            text = text.replace(ch, f"\\{ch}")
+        # Also escape logical operators when used as standalone tokens
+        for op in ["&&", "||"]:
+            text = text.replace(op, f"\\{op}")
+        return text
+
     def search(self, query: str, top_k: int = None, reranker_top_k: int = None) -> RetrieverResult:
         """
         Search with optional reranking
@@ -46,8 +61,11 @@ class EnhancedRetriever:
             if config.HYBRID_RANKER.lower() == "linear":
                 log(f"Using alpha: {config.HYBRID_ALPHA}", level="debug")
             
+            # Sanitize for Neo4j fulltext (Lucene) to avoid TokenMgrError
+            safe_query = self._sanitize_lucene_query(query)
+
             # Try to use ranker parameters if the retriever supports them
-            base_result = self._search_with_ranker_support(query, top_k)
+            base_result = self._search_with_ranker_support(safe_query, top_k)
 
             if not self.use_reranker or not self.reranker or not base_result.items:
                 return base_result
@@ -73,6 +91,7 @@ class EnhancedRetriever:
                 reranker_top_k = config.RERANKER_TOP_K
             
             # Rerank and select the specified number of best results
+            # Use original (unsanitized) query for semantic reranking
             reranked_results = self.reranker.rerank(query, chunks, top_k=reranker_top_k)
 
             # Convert back to RetrieverResultItem format
@@ -104,7 +123,7 @@ class EnhancedRetriever:
         except Exception as e:
             traceback.print_exc()
             # Fallback to basic search
-            return self.base_retriever.search(query, top_k=top_k)
+            return self.base_retriever.search(safe_query, top_k=top_k)
     
     def _search_with_ranker_support(self, query: str, top_k: int) -> RetrieverResult:
         """
@@ -157,13 +176,9 @@ class EnhancedRetriever:
                 log(f"HybridSearchModel not supported: {e}", level="debug")
                 pass
             
-            # Method 3: Fallback to basic search
-            log("Falling back to basic search (ranker settings may not be applied)", level="debug")
-            return self.base_retriever.search(query, top_k=top_k)
-            
         except Exception as e:
             log(f"Error in ranker search: {e}", level="debug")
-            return self.base_retriever.search(query, top_k=top_k)
+            return self.base_retriever.search(top_k=top_k)
     
     def get_total_chunk_count(self) -> int:
         """Get total number of chunks available in the database for this retriever"""

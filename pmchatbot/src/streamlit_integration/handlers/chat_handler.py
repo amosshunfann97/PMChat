@@ -74,18 +74,85 @@ def generate_llm_response(user_question, retrieved_info, context_label):
     Returns:
         str: Generated response
     """
-    # Build prompt with system instructions
+    # Format limited chat history to provide conversational memory
+    def _format_chat_history(limit: int = 10) -> str:
+        history = get_chat_history() or []
+        if not history:
+            return ""
+        selected = history[-limit:]
+        lines = []
+        for msg in selected:
+            role = "User" if msg.get("role") == "user" else "Assistant"
+            content = msg.get("content", "")
+            lines.append(f"{role}: {content}")
+        return "\n".join(lines)
+
+    history_block = _format_chat_history()
+    history_section = f"\nConversation History (recent):\n{history_block}\n" if history_block else ""
+
+    # Build prompt with system instructions and conversation memory
     prompt = f"""{PROCESS_MINING_CONTEXT}
 
 Manufacturing Process Context: You are analyzing a manufacturing process with several activities. You have access to {context_label} chunks.
+{history_section}
+Conversation Use Policy:
+- Use conversation history to resolve follow-ups, pronouns ("this", "that"), and references to earlier labels, assumptions, or decisions made in the chat.
+- If the user asks what was said earlier, answer from conversation history even if it is not present in the retrieved chunks.
+- When conversation history conflicts with retrieved data, state both succinctly and ask a brief clarification.
 
 Retrieved Information: {retrieved_info}
 
 User Question: {user_question}
 
-Please provide a detailed process mining analysis based on the retrieved information."""
+Please answer concisely, using retrieved data for facts and conversation history for references and previously discussed items."""
     
     answer = st.session_state.llm.invoke(prompt).content
+
+    # Normalize formatting: ensure the first non-empty line is not a bullet
+    try:
+        lines = answer.splitlines()
+        # Find first non-empty line
+        idx = next((i for i, l in enumerate(lines) if l.strip() != ""), None)
+        if idx is not None:
+            first = lines[idx]
+            stripped = first.lstrip()
+            # Patterns like '-', '*', '•', or numbered lists '1.'/'1)'
+            bullet_prefixes = ("- ", "* ", "• ")
+            number_list = False
+            # Simple check for numbered list prefix
+            if len(stripped) > 2 and stripped[0].isdigit():
+                # e.g., '1. text' or '1) text'
+                if stripped[1:3] in (". ", ") ") or (stripped[1] in ".)" and len(stripped) > 2 and stripped[2] == " "):
+                    number_list = True
+            if stripped.startswith(bullet_prefixes) or number_list:
+                # Remove only the first bullet/number marker
+                if stripped.startswith(bullet_prefixes):
+                    for p in bullet_prefixes:
+                        if stripped.startswith(p):
+                           stripped = stripped[len(p):]
+                           break
+                elif number_list:
+                    # Remove up to the first space after the marker
+                    # Find first space after the marker characters
+                    # e.g., '1. summary' -> 'summary'
+                    after = stripped
+                    # Remove leading digits
+                    j = 0
+                    while j < len(after) and after[j].isdigit():
+                        j += 1
+                    # Skip '.' or ')' and a following space if present
+                    if j < len(after) and after[j] in ".)":
+                        j += 1
+                    if j < len(after) and after[j] == " ":
+                        j += 1
+                    stripped = after[j:]
+                # Rebuild lines with normalized first line
+                lines[idx] = ("" if first.startswith(" ") else "") + stripped
+                answer = "\n".join(lines)
+    except Exception:
+        # If anything goes wrong, fall back to original answer
+        pass
+
     return answer
 
 
