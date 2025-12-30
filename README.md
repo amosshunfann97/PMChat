@@ -1,2 +1,2 @@
 # PMChat
-Please visit pmchatbot folder for the process minign chatbot prototype. 
+Please visit pmchatbot folder for the process mining chatbot prototype. 
