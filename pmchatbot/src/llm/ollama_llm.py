@@ -1,11 +1,26 @@
 import ollama
 import re
+import os
 from typing import Dict, Any, Optional
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
 from pmchatbot.src.config.settings import Config
 
 config = Config()
+
+
+def _ensure_localhost_no_proxy() -> None:
+    localhost_entries = {"localhost", "127.0.0.1", "::1"}
+
+    existing_no_proxy = os.environ.get("NO_PROXY", "")
+    tokens = [token.strip() for token in existing_no_proxy.split(",") if token.strip()]
+    token_set = set(tokens)
+
+    if not localhost_entries.issubset(token_set):
+        merged = tokens + [entry for entry in localhost_entries if entry not in token_set]
+        os.environ["NO_PROXY"] = ",".join(merged)
+
+    os.environ["no_proxy"] = os.environ.get("NO_PROXY", "")
 
 class OllamaLLM(LLMInterface):
     """Custom LLM implementation for Ollama models using ollama-python library"""
@@ -17,6 +32,8 @@ class OllamaLLM(LLMInterface):
         base_url: str = None,
         hide_thinking: bool = None
     ):
+        _ensure_localhost_no_proxy()
+
         self.model_name = model_name or config.LLM_MODEL_NAME_OLLAMA
         self._model_params = model_params or config.LLM_MODEL_PARAMS
         self.base_url = base_url or config.OLLAMA_BASE_URL
@@ -44,6 +61,8 @@ class OllamaLLM(LLMInterface):
     def invoke(self, input_, *args, system_instruction=None, **kwargs) -> LLMResponse:
         """Send request to Ollama and return response"""
         try:
+            _ensure_localhost_no_proxy()
+
             prompt = input_
             if system_instruction:
                 prompt = f"{system_instruction}\n\n{input_}"
