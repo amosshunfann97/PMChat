@@ -1,9 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env file from the pmchatbot directory
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env')
+load_dotenv(env_path)
 
-PROCESS_MINING_CONTEXT = """You are a process mining expert. Please carefully read the {context_label}, word by word. Take note, If the user's question is not related to process mining, is just an one single character, or word, reply with: "I can only answer questions related to process mining." Always keep the answer short and to the point. Prefer bullet points. Do not provide extra analysis or insights unless the user specifically asks for it. If the answer is more than 1 options, list all out. 
+PROCESS_MINING_CONTEXT = """You are a process mining expert. Please carefully read the {context_label}, word by word. Take note, If the user's question is not related to process mining, is just an one single character, or word, reply with: "I can only answer questions related to process mining." Always keep the answer short and to the point. Start with a single summary sentence on the first line without any bullet/number prefix, then provide supporting details as bullet points on the following lines only. Never put a bullet (like '-', '*', '•') or numbered list on the first line. Do not provide extra analysis or insights unless the user specifically asks for it. If the answer is more than 1 options, list all out. 
 
 TERMINOLOGY DEFINITIONS (IMPORTANT FOR ACCURATE ANSWERS):
 - "Execution count": Total number of times an activity was done across ALL cases/instances

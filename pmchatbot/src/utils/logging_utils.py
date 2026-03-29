@@ -1,4 +1,4 @@
-from config.settings import Config
+from pmchatbot.src.config.settings import Config
 
 config = Config()
 

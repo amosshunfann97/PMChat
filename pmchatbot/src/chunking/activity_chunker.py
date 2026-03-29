@@ -1,4 +1,4 @@
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 def generate_activity_based_chunks(dfg, start_activities, end_activities, activity_case_map, rework_cases=None):
     """Generate activity-based chunks for RAG"""

@@ -1,0 +1,1 @@
+# Core module for state management and business logic

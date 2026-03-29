@@ -1,7 +1,7 @@
 import traceback
 from neo4j_graphrag.retrievers import HybridCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem, HybridSearchRanker
-from config.settings import Config
+from pmchatbot.src.config.settings import Config
 
 config = Config()
 

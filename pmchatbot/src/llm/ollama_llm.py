@@ -3,7 +3,7 @@ import re
 from typing import Dict, Any, Optional
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
-from config.settings import Config
+from pmchatbot.src.config.settings import Config
 
 config = Config()
 

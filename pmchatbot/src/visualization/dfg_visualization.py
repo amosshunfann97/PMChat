@@ -1,12 +1,12 @@
 import pm4py
 import pandas as pd
-from utils.logging_utils import log
+from pmchatbot.src.utils.logging_utils import log
 
 def visualize_dfg(dfg, start_activities, end_activities, output_path="dfg_pm4py.png"):
     """Visualize and save the DFG using PM4Py."""
     try:
-        pm4py.view_dfg(dfg, start_activities, end_activities, rankdir="TB")
-        # pm4py.save_vis_dfg(dfg, start_activities, end_activities, output_path)
+        # pm4py.view_dfg(dfg, start_activities, end_activities, rankdir="TB")  # Remove or comment out
+        pm4py.save_vis_dfg(dfg, start_activities, end_activities, output_path)  # Use this to save PNG
         log(f"DFG visualization saved to {output_path}", level="info")
     except Exception as e:
         log(f"DFG visualization failed: {e}", level="error")

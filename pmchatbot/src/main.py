@@ -1,20 +1,24 @@
+import sys
+import os
+import gc
+
 import openai
-from config.settings import Config
-from data.data_loader import load_csv_data, build_activity_case_map, list_part_descs, filter_by_part_desc
-from data.data_processor import prepare_pm4py_log, discover_process_model, extract_case_variants, extract_process_paths
-from chunking.activity_chunker import generate_activity_based_chunks
-from chunking.process_chunker import generate_process_based_chunks
-from chunking.variant_chunker import generate_variant_based_chunks
-from embeddings.local_embedder import get_local_embedder
-from database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
-from database.data_storage import store_chunks_in_neo4j
-from retrieval.enhanced_retriever import setup_enhanced_retriever
-from interface.query_interface import graphrag_query_interface
-from llm.llm_factory import get_current_model_info, get_embedding_model_name, get_reranker_model_name
+from pmchatbot.src.config.settings import Config
+from pmchatbot.src.data.data_loader import load_csv_data, build_activity_case_map, list_part_descs, filter_by_part_desc
+from pmchatbot.src.data.data_processor import prepare_pm4py_log, discover_process_model, extract_case_variants, extract_process_paths
+from pmchatbot.src.chunking.activity_chunker import generate_activity_based_chunks
+from pmchatbot.src.chunking.process_chunker import generate_process_based_chunks
+from pmchatbot.src.chunking.variant_chunker import generate_variant_based_chunks
+from pmchatbot.src.embeddings.local_embedder import get_local_embedder
+from pmchatbot.src.database.neo4j_manager import connect_neo4j, force_clean_neo4j_indexes
+from pmchatbot.src.database.data_storage import store_chunks_in_neo4j
+from pmchatbot.src.retrieval.enhanced_retriever import setup_enhanced_retriever
+from pmchatbot.src.interface.query_interface import graphrag_query_interface
+from pmchatbot.src.llm.llm_factory import get_current_model_info, get_embedding_model_name, get_reranker_model_name
 import torch
-from visualization.dfg_visualization import visualize_dfg, export_dfg_data
-from visualization.performance_dfg_visualization import visualize_performance_dfg
-from utils.logging_utils import log
+from pmchatbot.src.visualization.dfg_visualization import visualize_dfg, export_dfg_data
+from pmchatbot.src.visualization.performance_dfg_visualization import visualize_performance_dfg
+from pmchatbot.src.utils.logging_utils import log
 
 config = Config()
 
